@@ -51,6 +51,8 @@ dependencies {
 
     compile 'nl.komponents.kovenant:kovenant:2.2.+'
 
+	testCompile 'org.elasticmq:elasticmq-core_2.10:0.6.3'
+	testCompile 'org.elasticmq:elasticmq-rest-sqs_2.10:0.6.3'
     testCompile 'junit:junit:4.12'
 }
 

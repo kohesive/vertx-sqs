@@ -1,22 +1,22 @@
-package vertx.io.sqs.impl
+package io.vertx.sqs.impl
 
 import com.amazonaws.AmazonClientException
 import com.amazonaws.AmazonWebServiceRequest
 import com.amazonaws.auth.AWSCredentials
+import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.sqs.AmazonSQSAsyncClient
-import com.amazonaws.services.sqs.model.CreateQueueRequest
-import com.amazonaws.services.sqs.model.ListQueuesRequest
-import com.amazonaws.services.sqs.model.SendMessageRequest
+import com.amazonaws.services.sqs.model.*
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
-import vertx.io.sqs.SqsClient
+import io.vertx.sqs.SqsClient
 
 public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient {
 
@@ -51,23 +51,48 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         }
     }
 
+    override fun receiveMessage(queueUrl: String, resultHandler: Handler<AsyncResult<List<JsonObject>>>) {
+        withClient { client ->
+            client.receiveMessageAsync(ReceiveMessageRequest(queueUrl), resultHandler.withConverter { sqsResult ->
+                sqsResult.getMessages().map {
+                    it.toJsonObject()
+                }
+            })
+        }
+    }
+
+    // TODO: attributes
+    private fun Message.toJsonObject(): JsonObject = JsonObject()
+        .put("id", this.getMessageId())
+        .put("body", this.getBody())
+        .put("bodyMd5", this.getMD5OfBody())
+        .put("receiptHandle", this.getReceiptHandle())
+
     override fun start(resultHandler: Handler<AsyncResult<Void>>) {
         log.info("Starting SQS client");
 
         vertx.executeBlocking(Handler { future ->
             try {
-                val credentials: AWSCredentials = try {
-                    ProfileCredentialsProvider().getCredentials()
-                } catch (t: Throwable) {
-                    throw AmazonClientException(
-                        "Cannot load the credentials from the credential profiles file. " +
-                        "Please make sure that your credentials file is at the correct " +
-                        "location (~/.aws/credentials), and is in valid format."
-                    )
+                val credentials: AWSCredentials = if (config.getString("accessKey") != null) {
+                    BasicAWSCredentials(config.getString("accessKey"), config.getString("secretKey"))
+                } else {
+                    try {
+                        ProfileCredentialsProvider().getCredentials()
+                    } catch (t: Throwable) {
+                        throw AmazonClientException(
+                            "Cannot load the credentials from the credential profiles file. " +
+                            "Please make sure that your credentials file is at the correct "  +
+                            "location (~/.aws/credentials), and is in valid format."
+                        )
+                    }
                 }
 
                 client = AmazonSQSAsyncClient(credentials)
-                client?.setRegion(Region.getRegion(Regions.US_WEST_2)) // TODO: configure
+
+                client?.setRegion(Region.getRegion(Regions.fromName(config.getString("region"))))
+                if (config.getString("host") != null && config.getInteger("port") != null) {
+                    client?.setEndpoint("http://${ config.getString("host") }:${ config.getInteger("port") }")
+                }
 
                 future.complete()
             } catch (t: Throwable) {
@@ -101,7 +126,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     class SqsToVertxHandlerAdapter<SqsRequest : AmazonWebServiceRequest, SqsResult, VertxResult>(
         val vertxHandler: Handler<AsyncResult<VertxResult>>,
         val sqsResultToVertxMapper: (SqsResult) -> VertxResult
-    ) : com.amazonaws.handlers.AsyncHandler<SqsRequest, SqsResult> {
+    ) : AsyncHandler<SqsRequest, SqsResult> {
 
         override fun onSuccess(request: SqsRequest, result: SqsResult) {
             vertxHandler.handle(Future.succeededFuture(sqsResultToVertxMapper(result)))

@@ -1,11 +1,11 @@
-package vertx.io.sqs;
+package io.vertx.sqs;
 
 import io.vertx.codegen.annotations.VertxGen;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import vertx.io.sqs.impl.SqsClientImpl;
+import io.vertx.sqs.impl.SqsClientImpl;
 
 import java.util.List;
 import java.util.Map;
@@ -33,6 +33,10 @@ public interface SqsClient {
     // TODO: add support for attributes
     void sendMessage(String queueUrl, String messageBody, Integer delaySeconds, Handler<AsyncResult<String>> resultHandler);
 
+    /**
+     * Async result is a message JSON object.
+     */
+    void receiveMessage(String queueUrl, Handler<AsyncResult<List<JsonObject>>> resultHandler);
 
     void start(Handler<AsyncResult<Void>> resultHandler);
 
