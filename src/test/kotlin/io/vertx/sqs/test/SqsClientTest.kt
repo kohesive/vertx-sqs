@@ -28,9 +28,11 @@ class SqsClientTest {
         val ElasticMqPort = 12365
         val ElasticMqHost = "localhost"
 
-        private var client: SqsClient? = null
+        fun getQueueUrl(queueName: String) = "http://$ElasticMqHost:$ElasticMqPort/queue/$queueName"
+
+        private var client: SqsClient?     = null
         private var sqsServer: RestServer? = null
-        private var elasticNode: Node? = null
+        private var elasticNode: Node?     = null
 
         @BeforeClass
         @platformStatic
@@ -51,13 +53,14 @@ class SqsClientTest {
             )))
 
             val latch = CountDownLatch(1)
-            client?.start(context.asyncAssertSuccess({ latch.countDown() }))
+            client?.start(context.asyncAssertSuccess { latch.countDown() })
             latch.await(10, TimeUnit.SECONDS)
         }
 
         @AfterClass
         @platformStatic
         fun after(context: TestContext) {
+            client?.stop(context.asyncAssertSuccess())
             vertx.close(context.asyncAssertSuccess())
 
             sqsServer?.stop()
@@ -71,6 +74,21 @@ class SqsClientTest {
             client.createQueue("testQueue", mapOf(), context.asyncAssertSuccess {
                 client.listQueues(null, context.asyncAssertSuccess { queues ->
                     context.assertTrue(queues.firstOrNull { it ==  "http://$ElasticMqHost:$ElasticMqPort/queue/testQueue"} != null)
+                })
+            })
+        }
+    }
+
+    @Test
+    fun testSendAndReceive(context: TestContext) {
+        val queueName   = getQueueUrl("testQueue")
+        val messageBody = "Test message"
+
+        context.withClient { client ->
+            client.sendMessage(queueName, messageBody, context.asyncAssertSuccess {
+                client.receiveMessage(queueName, context.asyncAssertSuccess { messages ->
+                    context.assertFalse(messages.isEmpty())
+                    context.assertTrue(messages.firstOrNull { it.getString("body") == messageBody } != null)
                 })
             })
         }

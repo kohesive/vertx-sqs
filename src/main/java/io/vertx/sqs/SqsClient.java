@@ -28,10 +28,16 @@ public interface SqsClient {
     void listQueues(String namePrefix, Handler<AsyncResult<List<String>>> resultHandler);
 
     /**
-     * Async result is a message's Id. 'delaySeconds' is nullable.
+     * Async result is a message's Id.
      */
     // TODO: add support for attributes
     void sendMessage(String queueUrl, String messageBody, Integer delaySeconds, Handler<AsyncResult<String>> resultHandler);
+
+    /**
+     * Async result is a message's Id.
+     */
+    // TODO: add support for attributes
+    void sendMessage(String queueUrl, String messageBody, Handler<AsyncResult<String>> resultHandler);
 
     /**
      * Async result is a message JSON object.

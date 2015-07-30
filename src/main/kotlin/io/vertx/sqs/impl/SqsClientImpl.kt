@@ -26,6 +26,10 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
 
     private var client: AmazonSQSAsyncClient? = null
 
+    override fun sendMessage(queueUrl: String, messageBody: String, resultHandler: Handler<AsyncResult<String>>) {
+        sendMessage(queueUrl, messageBody, null, resultHandler)
+    }
+
     override fun sendMessage(queueUrl: String, messageBody: String, delaySeconds: Int?, resultHandler: Handler<AsyncResult<String>>) {
         withClient { client ->
             val request = SendMessageRequest(queueUrl, messageBody).withDelaySeconds(delaySeconds)
@@ -110,8 +114,8 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         }
     }
 
-    override fun stop(resultHandler: Handler<AsyncResult<Void>>?) {
-        // nothing
+    override fun stop(resultHandler: Handler<AsyncResult<Void>>) {
+        resultHandler.handle(Future.succeededFuture()) // nothing
     }
 
     fun <SqsRequest : AmazonWebServiceRequest, SqsResult, VertxResult>
