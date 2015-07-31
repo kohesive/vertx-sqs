@@ -1,8 +1,11 @@
 package io.vertx.sqs
 
 import io.vertx.core.AbstractVerticle
+import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
+import io.vertx.core.eventbus.Message
+import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
 
 class SqsQueueConsumerVerticle : AbstractVerticle() {
@@ -35,9 +38,21 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
         vertx.setPeriodic(pollingInterval) {
             client?.receiveMessage(queueUrl, Handler {
                 if (it.succeeded()) {
-                    val messageJsons = it.result()
+                    it.result().forEach { message ->
+                        val reciept = message.getString("receiptHandle")
 
-                    // TODO: publish
+                        vertx.eventBus().send(address, message, Handler { ar: AsyncResult<Message<Void>> ->
+                            if (ar.succeeded()) {
+                                client?.deleteMessage(queueUrl, reciept) {
+                                    if (it.failed()) {
+                                        log.warn("Unable to acknowledge message deletion with receipt = $reciept")
+                                    }
+                                }
+                            } else {
+                                log.warn("Message with receipt $reciept was failed to process by the consumer")
+                            }
+                        })
+                    }
                 } else {
                     log.error("Unable to poll messages from $queueUrl", it.cause())
                 }
