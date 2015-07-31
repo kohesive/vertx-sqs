@@ -65,6 +65,12 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         }
     }
 
+    override fun deleteMessage(queueUrl: String, receiptHandle: String, resultHandler: Handler<AsyncResult<Void?>>) {
+        withClient { client ->
+            client.deleteMessageAsync(DeleteMessageRequest(queueUrl, receiptHandle), resultHandler.toSqsHandler())
+        }
+    }
+
     // TODO: attributes
     private fun Message.toJsonObject(): JsonObject = JsonObject()
         .put("id", this.getMessageId())
@@ -118,8 +124,9 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         resultHandler.handle(Future.succeededFuture()) // nothing
     }
 
-    fun <SqsRequest : AmazonWebServiceRequest, SqsResult, VertxResult>
-            Handler<AsyncResult<VertxResult>>.withConverter(
+    fun <SqsRequest : AmazonWebServiceRequest> Handler<AsyncResult<Void?>>.toSqsHandler(): AsyncHandler<SqsRequest, Void?> = withConverter { it }
+
+    fun <SqsRequest : AmazonWebServiceRequest, SqsResult, VertxResult> Handler<AsyncResult<VertxResult>>.withConverter(
             converter: (SqsResult) -> VertxResult
     ): SqsToVertxHandlerAdapter<SqsRequest, SqsResult, VertxResult> =
         SqsToVertxHandlerAdapter(
@@ -139,7 +146,6 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         override fun onError(exception: Exception) {
             vertxHandler.handle(Future.failedFuture(exception))
         }
-
     }
 
 }

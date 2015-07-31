@@ -13,13 +13,16 @@ import org.elasticmq.rest.sqs.SQSRestServerBuilder
 import org.elasticmq.storage.inmemory.InMemoryStorage
 import org.junit.AfterClass
 import org.junit.BeforeClass
+import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.runners.MethodSorters
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.platform.platformStatic
 
 @RunWith(VertxUnitRunner::class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class SqsClientTest {
 
     companion object {
@@ -73,22 +76,36 @@ class SqsClientTest {
         context.withClient { client ->
             client.createQueue("testQueue", mapOf(), context.asyncAssertSuccess {
                 client.listQueues(null, context.asyncAssertSuccess { queues ->
-                    context.assertTrue(queues.firstOrNull { it ==  "http://$ElasticMqHost:$ElasticMqPort/queue/testQueue"} != null)
+                    context.assertTrue(queues.firstOrNull { it == getQueueUrl("testQueue") } != null)
                 })
             })
         }
     }
 
     @Test
-    fun testSendAndReceive(context: TestContext) {
+    fun testSendReceiveAndDelete(context: TestContext) {
         val queueName   = getQueueUrl("testQueue")
         val messageBody = "Test message"
 
         context.withClient { client ->
+            // Send
             client.sendMessage(queueName, messageBody, context.asyncAssertSuccess {
+                // Receive
                 client.receiveMessage(queueName, context.asyncAssertSuccess { messages ->
                     context.assertFalse(messages.isEmpty())
-                    context.assertTrue(messages.firstOrNull { it.getString("body") == messageBody } != null)
+
+                    val theMessage = messages.firstOrNull { it.getString("body") == messageBody }
+                    context.assertTrue(theMessage != null)
+
+                    // Delete
+                    val receipt = theMessage!!.getString("receiptHandle")
+                    context.assertNotNull(receipt)
+                    client.deleteMessage(queueName, receipt, context.asyncAssertSuccess() {
+                        // Message must be deleted by now, let's check
+                        client.receiveMessage(queueName, context.asyncAssertSuccess { messages ->
+                            context.assertTrue(messages.firstOrNull { it.getString("body") == messageBody } == null)
+                        })
+                    })
                 })
             })
         }
