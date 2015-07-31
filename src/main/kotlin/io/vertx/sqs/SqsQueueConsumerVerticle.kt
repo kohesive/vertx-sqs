@@ -1,0 +1,57 @@
+package io.vertx.sqs
+
+import io.vertx.core.AbstractVerticle
+import io.vertx.core.Future
+import io.vertx.core.Handler
+import io.vertx.core.logging.LoggerFactory
+
+class SqsQueueConsumerVerticle : AbstractVerticle() {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(javaClass)
+    }
+
+    private var client: SqsClient? = null
+
+    override fun start(startFuture: Future<Void>) {
+        client = SqsClient.create(vertx, config())
+
+        val queueUrl = config().getString("queueUrl")
+        val address  = config().getString("address")
+
+        val pollingInterval = config().getLong("pollingInterval")
+
+        client?.start {
+            if (it.succeeded()) {
+                subscribe(pollingInterval, queueUrl, address)
+                startFuture.complete()
+            } else {
+                startFuture.fail(it.cause())
+            }
+        }
+    }
+
+    private fun subscribe(pollingInterval: Long, queueUrl: String, address: String) {
+        vertx.setPeriodic(pollingInterval) {
+            client?.receiveMessage(queueUrl, Handler {
+                if (it.succeeded()) {
+                    val messageJsons = it.result()
+
+                    // TODO: publish
+                } else {
+                    log.error("Unable to poll messages from $queueUrl", it.cause())
+                }
+            })
+        }
+    }
+
+    override fun stop(stopFuture: Future<Void>) {
+        client?.stop {
+            if (it.succeeded()) {
+                stopFuture.complete()
+            } else {
+                stopFuture.fail(it.cause())
+            }
+        }
+    }
+}

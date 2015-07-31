@@ -42,9 +42,9 @@ class SqsClientTest {
         fun before(context: TestContext) {
             elasticNode = NodeBuilder.withStorage(InMemoryStorage())
             sqsServer   = SQSRestServerBuilder(
-                    elasticNode?.nativeClient(),
-                    ElasticMqPort,
-                    NodeAddress("http", ElasticMqHost, ElasticMqPort, "")
+                elasticNode?.nativeClient(),
+                ElasticMqPort,
+                NodeAddress("http", ElasticMqHost, ElasticMqPort, "")
             ).start()
 
             client = SqsClient.create(vertx, JsonObject(mapOf(
