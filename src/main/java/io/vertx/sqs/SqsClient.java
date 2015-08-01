@@ -22,6 +22,8 @@ public interface SqsClient {
      */
     void createQueue(String name, Map<String, String> attributes, Handler<AsyncResult<String>> resultHandler);
 
+    void deleteQueue(String queueUrl, Handler<AsyncResult<Void>> resultHandler);
+
     /**
      * Async result is a list of queues' URLs. 'namePrefix' is nullable.
      */

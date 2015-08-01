@@ -65,6 +65,12 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         }
     }
 
+    override fun deleteQueue(queueUrl: String, resultHandler: Handler<AsyncResult<Void?>>) {
+        withClient { client ->
+            client.deleteQueueAsync(DeleteQueueRequest(queueUrl), resultHandler.toSqsHandler())
+        }
+    }
+
     override fun deleteMessage(queueUrl: String, receiptHandle: String, resultHandler: Handler<AsyncResult<Void?>>) {
         withClient { client ->
             client.deleteMessageAsync(DeleteMessageRequest(queueUrl, receiptHandle), resultHandler.toSqsHandler())
@@ -99,7 +105,8 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
 
                 client = AmazonSQSAsyncClient(credentials)
 
-                client?.setRegion(Region.getRegion(Regions.fromName(config.getString("region"))))
+                val region = config.getString("region")
+                client?.setRegion(Region.getRegion(Regions.fromName(region)))
                 if (config.getString("host") != null && config.getInteger("port") != null) {
                     client?.setEndpoint("http://${ config.getString("host") }:${ config.getInteger("port") }")
                 }

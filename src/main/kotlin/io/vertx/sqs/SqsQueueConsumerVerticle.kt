@@ -11,10 +11,11 @@ import io.vertx.core.logging.LoggerFactory
 class SqsQueueConsumerVerticle : AbstractVerticle() {
 
     companion object {
-        private val log = LoggerFactory.getLogger(javaClass)
+        private val log = LoggerFactory.getLogger("SqsQueueConsumerVerticle")
     }
 
     private var client: SqsClient? = null
+    private var timerId: Long = -1
 
     override fun start(startFuture: Future<Void>) {
         client = SqsClient.create(vertx, config())
@@ -35,9 +36,10 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
     }
 
     private fun subscribe(pollingInterval: Long, queueUrl: String, address: String) {
-        vertx.setPeriodic(pollingInterval) {
+        timerId = vertx.setPeriodic(pollingInterval) {
             client?.receiveMessage(queueUrl, Handler {
                 if (it.succeeded()) {
+                    log.debug("Polled ${it.result().size()} messages")
                     it.result().forEach { message ->
                         val reciept = message.getString("receiptHandle")
 
@@ -61,6 +63,7 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
     }
 
     override fun stop(stopFuture: Future<Void>) {
+        vertx.cancelTimer(timerId)
         client?.stop {
             if (it.succeeded()) {
                 stopFuture.complete()
