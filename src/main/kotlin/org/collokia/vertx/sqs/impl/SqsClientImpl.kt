@@ -1,4 +1,4 @@
-package io.vertx.sqs.impl
+package org.collokia.vertx.sqs.impl
 
 import com.amazonaws.AmazonClientException
 import com.amazonaws.AmazonWebServiceRequest
@@ -16,7 +16,8 @@ import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
-import io.vertx.sqs.SqsClient
+import org.collokia.vertx.sqs.SqsClient
+import org.collokia.vertx.sqs.util.StringPair
 
 public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient {
 
@@ -71,9 +72,63 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         }
     }
 
+    override fun purgeQueue(queueUrl: String, resultHandler: Handler<AsyncResult<Void?>>) {
+        withClient { client ->
+            client.purgeQueueAsync(PurgeQueueRequest(queueUrl), resultHandler.toSqsHandler())
+        }
+    }
+
     override fun deleteMessage(queueUrl: String, receiptHandle: String, resultHandler: Handler<AsyncResult<Void?>>) {
         withClient { client ->
             client.deleteMessageAsync(DeleteMessageRequest(queueUrl, receiptHandle), resultHandler.toSqsHandler())
+        }
+    }
+
+    override fun setQueueAttributes(queueUrl: String, attributes: MutableMap<String, String>, resultHandler: Handler<AsyncResult<Void?>>) {
+        withClient { client ->
+            client.setQueueAttributesAsync(SetQueueAttributesRequest(queueUrl, attributes), resultHandler.toSqsHandler())
+        }
+    }
+
+    override fun changeMessageVisibility(queueUrl: String, receiptHandle: String, visibilityTimeout: Int, resultHandler: Handler<AsyncResult<Void?>>) {
+        withClient { client ->
+            client.changeMessageVisibilityAsync(ChangeMessageVisibilityRequest(queueUrl, receiptHandle, visibilityTimeout), resultHandler.toSqsHandler())
+        }
+    }
+
+    override fun getQueueUrl(queueName: String, queueOwnerAWSAccountId: String?, resultHandler: Handler<AsyncResult<String>>) {
+        withClient { client ->
+            client.getQueueUrlAsync(GetQueueUrlRequest(queueName).withQueueOwnerAWSAccountId(queueOwnerAWSAccountId), resultHandler.withConverter {
+                it.getQueueUrl()
+            })
+        }
+    }
+
+    override fun addPermissionAsync(queueUrl: String, label: String, aWSAccountIds: List<String>?, actions: List<String>?, resultHandler: Handler<AsyncResult<Void?>>) {
+        withClient { client ->
+            client.addPermissionAsync(AddPermissionRequest(queueUrl, label, aWSAccountIds, actions), resultHandler.toSqsHandler())
+        }
+    }
+
+    override fun removePermission(queueUrl: String, label: String, resultHandler: Handler<AsyncResult<Void?>>) {
+        withClient { client -> 
+            client.removePermissionAsync(RemovePermissionRequest(queueUrl, label), resultHandler.toSqsHandler())
+        }
+    }
+
+    override fun getQueueAttributes(queueUrl: String, attributeNames: List<String>?, resultHandler: Handler<AsyncResult<JsonObject>>) {
+        withClient { client ->
+            client.getQueueAttributesAsync(GetQueueAttributesRequest(queueUrl, attributeNames), resultHandler.withConverter {
+                JsonObject(it.getAttributes())
+            })
+        }
+    }
+
+    override fun listDeadLetterSourceQueues(queueUrl: String, resultHandler: Handler<AsyncResult<List<String>>>) {
+        withClient { client ->
+            client.listDeadLetterSourceQueuesAsync(ListDeadLetterSourceQueuesRequest(queueUrl), resultHandler.withConverter {
+                it.getQueueUrls()
+            })
         }
     }
 
@@ -96,9 +151,9 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
                         ProfileCredentialsProvider().getCredentials()
                     } catch (t: Throwable) {
                         throw AmazonClientException(
-                            "Cannot load the credentials from the credential profiles file. " +
-                            "Please make sure that your credentials file is at the correct "  +
-                            "location (~/.aws/credentials), and is in valid format."
+                                "Cannot load the credentials from the credential profiles file. " +
+                                        "Please make sure that your credentials file is at the correct " +
+                                        "location (~/.aws/credentials), and is in valid format."
                         )
                     }
                 }

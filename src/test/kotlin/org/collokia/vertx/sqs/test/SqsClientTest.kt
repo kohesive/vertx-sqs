@@ -1,10 +1,10 @@
-package io.vertx.sqs.test
+package org.collokia.vertx.sqs.test
 
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import io.vertx.sqs.SqsClient
+import org.collokia.vertx.sqs.SqsClient
 import org.elasticmq.Node
 import org.elasticmq.NodeAddress
 import org.elasticmq.NodeBuilder

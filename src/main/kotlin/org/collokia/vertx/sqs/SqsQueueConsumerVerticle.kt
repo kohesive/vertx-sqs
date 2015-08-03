@@ -1,12 +1,12 @@
-package io.vertx.sqs
+package org.collokia.vertx.sqs
 
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.eventbus.Message
-import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
+import org.collokia.vertx.sqs.SqsClient
 
 class SqsQueueConsumerVerticle : AbstractVerticle() {
 
@@ -35,6 +35,14 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
         }
     }
 
+    private fun deleteMessage(queueUrl: String, reciept: String) {
+        client?.deleteMessage(queueUrl, reciept, Handler {
+            if (it.failed()) {
+                log.warn("Unable to acknowledge message deletion with receipt = $reciept")
+            }
+        })
+    }
+
     private fun subscribe(pollingInterval: Long, queueUrl: String, address: String) {
         timerId = vertx.setPeriodic(pollingInterval) {
             client?.receiveMessage(queueUrl, Handler {
@@ -45,11 +53,8 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
 
                         vertx.eventBus().send(address, message, Handler { ar: AsyncResult<Message<Void>> ->
                             if (ar.succeeded()) {
-                                client?.deleteMessage(queueUrl, reciept) {
-                                    if (it.failed()) {
-                                        log.warn("Unable to acknowledge message deletion with receipt = $reciept")
-                                    }
-                                }
+                                // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
+                                deleteMessage(queueUrl, reciept)
                             } else {
                                 log.warn("Message with receipt $reciept was failed to process by the consumer")
                             }

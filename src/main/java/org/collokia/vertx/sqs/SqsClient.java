@@ -1,11 +1,11 @@
-package io.vertx.sqs;
+package org.collokia.vertx.sqs;
 
 import io.vertx.codegen.annotations.VertxGen;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.sqs.impl.SqsClientImpl;
+import org.collokia.vertx.sqs.impl.SqsClientImpl;
 
 import java.util.List;
 import java.util.Map;
@@ -47,6 +47,28 @@ public interface SqsClient {
     void receiveMessage(String queueUrl, Handler<AsyncResult<List<JsonObject>>> resultHandler);
 
     void deleteMessage(String queueUrl, String receiptHandle, Handler<AsyncResult<Void>> resultHandler);
+
+    void setQueueAttributes(String queueUrl, Map<String, String> attributes, Handler<AsyncResult<Void>> resultHandler);
+
+    void changeMessageVisibility(String queueUrl, String receiptHandle, Integer visibilityTimeout, Handler<AsyncResult<Void>> resultHandler);
+
+    /**
+     * Async result is the queue's URL. 'queueOwnerAWSAccountId' is nullable.
+     */
+    void getQueueUrl(String queueName, String queueOwnerAWSAccountId, Handler<AsyncResult<String>> resultHandler);
+
+    void addPermissionAsync(String queueUrl, String label, List<String> aWSAccountIds, List<String> actions, Handler<AsyncResult<Void>> resultHandler);
+
+    void removePermission(String queueUrl, String label, Handler<AsyncResult<Void>> resultHandler);
+
+    /**
+     * Async result is the attributes' keys/values map. 'attributeNames' is nullable.
+     */
+    void getQueueAttributes(String queueUrl, List<String> attributeNames, Handler<AsyncResult<JsonObject>> resultHandler);
+
+    void purgeQueue(String queueUrl, Handler<AsyncResult<Void>> resultHandler);
+
+    void listDeadLetterSourceQueues(String queueUrl, Handler<AsyncResult<List<String>>> resultHandler);
 
     void start(Handler<AsyncResult<Void>> resultHandler);
 

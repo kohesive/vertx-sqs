@@ -1,4 +1,4 @@
-package io.vertx.sqs.test
+package org.collokia.vertx.sqs.test
 
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Future
@@ -8,7 +8,7 @@ import io.vertx.core.eventbus.Message
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import io.vertx.sqs.SqsClient
+import org.collokia.vertx.sqs.SqsClient
 import org.elasticmq.Node
 import org.elasticmq.NodeAddress
 import org.elasticmq.NodeBuilder
@@ -51,7 +51,7 @@ class SqsQueueConsumerVerticleTest {
                 "pollingInterval" to 1000,
                 "queueUrl"        to getQueueUrl("testQueue"),
                 "address"         to "sqs.queue.test"
-            ))
+        ))
 
         @BeforeClass
         @platformStatic
@@ -90,7 +90,7 @@ class SqsQueueConsumerVerticleTest {
             client.createQueue("testQueue", mapOf("VisibilityTimeout" to "1"), context.asyncAssertSuccess() { queueUrl ->
                 context.assertEquals(queueUrl, getQueueUrl("testQueue"))
 
-                vertx.deployVerticle("io.vertx.sqs.SqsQueueConsumerVerticle", DeploymentOptions().setConfig(config), context.asyncAssertSuccess() {
+                vertx.deployVerticle("org.collokia.vertx.sqs.SqsQueueConsumerVerticle", DeploymentOptions().setConfig(config), context.asyncAssertSuccess() {
                     deploymentId = it
                 })
             })
