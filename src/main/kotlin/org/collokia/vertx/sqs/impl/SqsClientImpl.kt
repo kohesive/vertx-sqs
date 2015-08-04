@@ -39,10 +39,8 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         withClient { client ->
             val request = SendMessageRequest(queueUrl, messageBody).withDelaySeconds(delaySeconds)
 
-            request.setMessageAttributes(attributes?.getMap()?.map {
-                val label = it.getKey()
-
-                val attribute = (it.getValue() as? JsonObject)?.let {
+            request.setMessageAttributes(attributes?.getMap()?.mapValues {
+                (it.getValue() as? JsonObject)?.let {
                     val type       = it.getString("dataType")
                     val stringData = it.getString("stringData")
                     val binaryData = it.getBinary("binaryData")
@@ -57,9 +55,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
                         setDataType(type)
                     }
                 }
-
-                Pair(label, attribute)
-            }?.toMap())
+            })
 
             client.sendMessageAsync(request, resultHandler.withConverter { sqsResult ->
                 sqsResult.getMessageId()
