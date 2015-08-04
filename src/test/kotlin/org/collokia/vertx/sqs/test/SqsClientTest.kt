@@ -5,12 +5,8 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import org.collokia.vertx.sqs.SqsClient
-import org.elasticmq.Node
-import org.elasticmq.NodeAddress
-import org.elasticmq.NodeBuilder
-import org.elasticmq.rest.RestServer
+import org.elasticmq.rest.sqs.SQSRestServer
 import org.elasticmq.rest.sqs.SQSRestServerBuilder
-import org.elasticmq.storage.inmemory.InMemoryStorage
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.FixMethodOrder
@@ -28,24 +24,18 @@ class SqsClientTest {
     companion object {
         val vertx: Vertx = Vertx.vertx()
 
-        val ElasticMqPort = 12365
+        val ElasticMqPort = 9324
         val ElasticMqHost = "localhost"
 
         fun getQueueUrl(queueName: String) = "http://$ElasticMqHost:$ElasticMqPort/queue/$queueName"
 
-        private var client: SqsClient?     = null
-        private var sqsServer: RestServer? = null
-        private var elasticNode: Node?     = null
+        private var client: SqsClient?        = null
+        private var sqsServer: SQSRestServer? = null
 
         @BeforeClass
         @platformStatic
         fun before(context: TestContext) {
-            elasticNode = NodeBuilder.withStorage(InMemoryStorage())
-            sqsServer   = SQSRestServerBuilder(
-                elasticNode?.nativeClient(),
-                ElasticMqPort,
-                NodeAddress("http", ElasticMqHost, ElasticMqPort, "")
-            ).start()
+            sqsServer = SQSRestServerBuilder.withPort(ElasticMqPort).start()
 
             client = SqsClient.create(vertx, JsonObject(mapOf(
                 "host"      to ElasticMqHost,
@@ -66,8 +56,7 @@ class SqsClientTest {
             client?.stop(context.asyncAssertSuccess())
             vertx.close(context.asyncAssertSuccess())
 
-            sqsServer?.stop()
-            elasticNode?.shutdown()
+            sqsServer?.stopAndWait()
         }
     }
 
@@ -76,6 +65,7 @@ class SqsClientTest {
         context.withClient { client ->
             client.createQueue("testQueue", mapOf(), context.asyncAssertSuccess {
                 client.listQueues(null, context.asyncAssertSuccess { queues ->
+                    println(queues)
                     context.assertTrue(queues.firstOrNull { it == getQueueUrl("testQueue") } != null)
                 })
             })
@@ -89,13 +79,26 @@ class SqsClientTest {
 
         context.withClient { client ->
             // Send
-            client.sendMessage(queueName, messageBody, context.asyncAssertSuccess {
+
+            val stringAttribute = "someString"
+            val binaryAttribute = stringAttribute.toByteArray("UTF-8")
+
+            val attributes = JsonObject()
+                .put("stringAttribute", JsonObject().put("dataType", "String").put("stringData", stringAttribute))
+                // TODO: ElasticMQ fails to respond to binary attributes
+//                .put("binaryAttribute", JsonObject().put("dataType", "Binary").put("binaryData", binaryAttribute))
+
+            client.sendMessage(queueName, messageBody, attributes, context.asyncAssertSuccess {
                 // Receive
                 client.receiveMessage(queueName, context.asyncAssertSuccess { messages ->
                     context.assertFalse(messages.isEmpty())
 
                     val theMessage = messages.firstOrNull { it.getString("body") == messageBody }
                     context.assertTrue(theMessage != null)
+
+                    val messageAttributes = theMessage?.getJsonObject("messageAttributes")
+                    context.assertNotNull(messageAttributes)
+                    context.assertEquals(stringAttribute, messageAttributes?.getJsonObject("stringAttribute")?.getString("stringData"))
 
                     // Delete
                     val receipt = theMessage!!.getString("receiptHandle")

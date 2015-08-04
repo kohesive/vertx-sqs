@@ -31,9 +31,30 @@ public interface SqsClient {
 
     /**
      * Async result is a message's Id.
+     *
+     * Message attributes JSON format:
+     * <code>
+     *   {
+     *     "someLabel":{
+     *       "dataType":"String",
+     *       "stringData":"Hello World"
+     *     },
+     *     "anotherLabel":{
+     *       "dataType":"Binary",
+     *       "stringData":"TWFuIGlzIGRpc3Rpbmd1"
+     *     }
+     *   }
+     * </code>
+     *
      */
     // TODO: add support for attributes
-    void sendMessage(String queueUrl, String messageBody, Integer delaySeconds, Handler<AsyncResult<String>> resultHandler);
+    void sendMessage(String queueUrl, String messageBody, JsonObject attributes, Integer delaySeconds, Handler<AsyncResult<String>> resultHandler);
+
+    /**
+     * Async result is a message's Id.
+     */
+    // TODO: add support for attributes
+    void sendMessage(String queueUrl, String messageBody, JsonObject attributes, Handler<AsyncResult<String>> resultHandler);
 
     /**
      * Async result is a message's Id.

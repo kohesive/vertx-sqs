@@ -17,6 +17,7 @@ import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
 import org.collokia.vertx.sqs.SqsClient
+import java.nio.ByteBuffer
 
 public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient {
 
@@ -27,12 +28,39 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     private var client: AmazonSQSAsyncClient? = null
 
     override fun sendMessage(queueUrl: String, messageBody: String, resultHandler: Handler<AsyncResult<String>>) {
-        sendMessage(queueUrl, messageBody, null, resultHandler)
+        sendMessage(queueUrl, messageBody, null, null, resultHandler)
     }
 
-    override fun sendMessage(queueUrl: String, messageBody: String, delaySeconds: Int?, resultHandler: Handler<AsyncResult<String>>) {
+    override fun sendMessage(queueUrl: String, messageBody: String, attributes: JsonObject?, resultHandler: Handler<AsyncResult<String>>) {
+        sendMessage(queueUrl, messageBody, attributes, null, resultHandler)
+    }
+
+    override fun sendMessage(queueUrl: String, messageBody: String, attributes: JsonObject?, delaySeconds: Int?, resultHandler: Handler<AsyncResult<String>>) {
         withClient { client ->
             val request = SendMessageRequest(queueUrl, messageBody).withDelaySeconds(delaySeconds)
+
+            request.setMessageAttributes(attributes?.getMap()?.map {
+                val label = it.getKey()
+
+                val attribute = (it.getValue() as? JsonObject)?.let {
+                    val type       = it.getString("dataType")
+                    val stringData = it.getString("stringData")
+                    val binaryData = it.getBinary("binaryData")
+
+                    MessageAttributeValue().apply {
+                        if (binaryData != null) {
+                            setBinaryValue(ByteBuffer.wrap(binaryData))
+                        }
+                        if (stringData != null) {
+                            setStringValue(stringData)
+                        }
+                        setDataType(type)
+                    }
+                }
+
+                Pair(label, attribute)
+            }?.toMap())
+
             client.sendMessageAsync(request, resultHandler.withConverter { sqsResult ->
                 sqsResult.getMessageId()
             })
@@ -131,12 +159,29 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         }
     }
 
-    // TODO: attributes
     private fun Message.toJsonObject(): JsonObject = JsonObject()
         .put("id", this.getMessageId())
         .put("body", this.getBody())
         .put("bodyMd5", this.getMD5OfBody())
         .put("receiptHandle", this.getReceiptHandle())
+        .put("attributes", JsonObject(this.getAttributes()))
+        .put("messageAttributes", JsonObject(
+            this.getMessageAttributes().mapValues { messageAttribute -> JsonObject()
+                .put("dataType", messageAttribute.value.getDataType())
+                .apply {
+                    if (messageAttribute.getValue().getBinaryValue() != null) {
+                        this.put("binaryData", messageAttribute.getValue().getBinaryValue().let {
+                            val byteArray = ByteArray(it.remaining())
+                            it.get(byteArray)
+                            byteArray
+                        })
+                    } else {
+                        this.put("stringData", messageAttribute.getValue().getStringValue())
+                    }
+                }
+            }
+        ))
+
 
     override fun start(resultHandler: Handler<AsyncResult<Void>>) {
         log.info("Starting SQS client");

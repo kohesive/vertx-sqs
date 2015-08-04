@@ -67,8 +67,8 @@ dependencies {
 
     annotationProcessor 'io.vertx:vertx-codegen:3.0.0'
 
-    testCompile 'org.elasticmq:elasticmq-core_2.10:0.6.3'
-    testCompile 'org.elasticmq:elasticmq-rest-sqs_2.10:0.6.3'
+    testCompile 'org.elasticmq:elasticmq-core_2.11:0.8.8'
+    testCompile 'org.elasticmq:elasticmq-rest-sqs_2.11:0.8.8'
     testCompile 'junit:junit:4.12'
 }
 

@@ -9,12 +9,8 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import org.collokia.vertx.sqs.SqsClient
-import org.elasticmq.Node
-import org.elasticmq.NodeAddress
-import org.elasticmq.NodeBuilder
-import org.elasticmq.rest.RestServer
+import org.elasticmq.rest.sqs.SQSRestServer
 import org.elasticmq.rest.sqs.SQSRestServerBuilder
-import org.elasticmq.storage.inmemory.InMemoryStorage
 import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
@@ -30,14 +26,13 @@ class SqsQueueConsumerVerticleTest {
 
         val vertx: Vertx = Vertx.vertx()
 
-        val ElasticMqPort = 12365
+        val ElasticMqPort = 9324
         val ElasticMqHost = "localhost"
 
         fun getQueueUrl(queueName: String) = "http://$ElasticMqHost:$ElasticMqPort/queue/$queueName"
 
-        private var client: SqsClient?     = null
-        private var sqsServer: RestServer? = null
-        private var elasticNode: Node?     = null
+        private var client: SqsClient?        = null
+        private var sqsServer: SQSRestServer? = null
 
         val config = JsonObject(mapOf(
             // SQS client config
@@ -56,12 +51,7 @@ class SqsQueueConsumerVerticleTest {
         @BeforeClass
         @platformStatic
         fun before(context: TestContext) {
-            elasticNode = NodeBuilder.withStorage(InMemoryStorage())
-            sqsServer   = SQSRestServerBuilder(
-                elasticNode?.nativeClient(),
-                ElasticMqPort,
-                NodeAddress("http", ElasticMqHost, ElasticMqPort, "")
-            ).start()
+            sqsServer = SQSRestServerBuilder.withPort(ElasticMqPort).start()
 
             println("Started SQS server")
 
@@ -77,8 +67,7 @@ class SqsQueueConsumerVerticleTest {
             client?.stop(context.asyncAssertSuccess())
             vertx.close(context.asyncAssertSuccess())
 
-            sqsServer?.stop()
-            elasticNode?.shutdown()
+            sqsServer?.stopAndWait()
         }
     }
 
