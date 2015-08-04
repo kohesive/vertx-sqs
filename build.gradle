@@ -34,6 +34,21 @@ configurations {
     annotationProcessor
 }
 
+ext {
+    generatedSrcDir = "$projectDir/src/generated"
+}
+
+sourceSets {
+    main {
+        groovy {
+            srcDir "$generatedSrcDir/groovy"
+        }
+        resources {
+            srcDir "$generatedSrcDir/resources"
+        }
+    }
+}
+
 dependencies {
     compile 'io.vertx:vertx-core:3.0.0'
     compile 'io.vertx:vertx-unit:3.0.0'
@@ -61,10 +76,18 @@ task wrapper(type: Wrapper) {
     gradleVersion = '2.0'
 }
 
+task cleanGenerated(type: Delete) {
+    delete generatedSrcDir
+}
+
 compileJava {
+    dependsOn cleanGenerated
+    doFirst {
+        mkdir generatedSrcDir
+    }
     options.compilerArgs += [
-        "-AoutputDirectory=$projectDir/src/main",
-        "-processor", "io.vertx.codegen.CodeGenProcessor"
+            "-AoutputDirectory=$generatedSrcDir",
+            "-processor", "io.vertx.codegen.CodeGenProcessor"
     ]
     classpath += configurations.annotationProcessor
 }
