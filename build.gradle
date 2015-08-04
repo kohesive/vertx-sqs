@@ -1,9 +1,9 @@
 buildscript {
-    repositories { 
-    	jcenter() 
-    	maven {
-        	url 'http://oss.sonatype.org/content/repositories/snapshots'
-	    }
+    repositories {
+        jcenter()
+        maven {
+            url 'http://oss.sonatype.org/content/repositories/snapshots'
+        }
     }
     dependencies {
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:0.1-SNAPSHOT'
@@ -12,6 +12,7 @@ buildscript {
 
 apply plugin: 'kotlin'
 apply plugin: 'idea'
+apply plugin: 'groovy'
 
 version = '3.0.0'
 
@@ -29,59 +30,41 @@ repositories {
     }
 }
 
-sourceSets {
-    generated {
-        kotlin {
-            srcDirs = ['src/main/generated']
-        }
-    }
+configurations {
+    annotationProcessor
 }
 
 dependencies {
     compile 'io.vertx:vertx-core:3.0.0'
-    compile 'io.vertx:vertx-unit:3.0.0'    
-    compile 'io.vertx:vertx-codegen:3.0.0'        
-    compile 'io.vertx:vertx-service-factory:3.0.0' 
-    compile 'io.vertx:vertx-hazelcast:3.0.0'                
-    compile 'io.vertx:vertx-service-proxy:3.0.0'                                    
+    compile 'io.vertx:vertx-unit:3.0.0'
+    compile 'io.vertx:vertx-codegen:3.0.0'
+    compile 'io.vertx:vertx-lang-groovy:3.0.0'
+    compile 'io.vertx:vertx-lang-js:3.0.0'
+    compile 'io.vertx:vertx-service-factory:3.0.0'
+    compile 'io.vertx:vertx-hazelcast:3.0.0'
+    compile 'io.vertx:vertx-service-proxy:3.0.0'
 
     compile 'org.jetbrains.kotlin:kotlin-stdlib:0.1-SNAPSHOT'
 
-	compile 'com.amazonaws:aws-java-sdk-sqs:1.10.6'
+    compile 'com.amazonaws:aws-java-sdk-sqs:1.10.6'
 
     compile 'nl.komponents.kovenant:kovenant:2.2.+'
 
-	testCompile 'org.elasticmq:elasticmq-core_2.10:0.6.3'
-	testCompile 'org.elasticmq:elasticmq-rest-sqs_2.10:0.6.3'
-    testCompile 'junit:junit:4.12'
-}
+    annotationProcessor 'io.vertx:vertx-codegen:3.0.0'
 
-kapt {
-    generateStubs = true
+    testCompile 'org.elasticmq:elasticmq-core_2.10:0.6.3'
+    testCompile 'org.elasticmq:elasticmq-rest-sqs_2.10:0.6.3'
+    testCompile 'junit:junit:4.12'
 }
 
 task wrapper(type: Wrapper) {
     gradleVersion = '2.0'
 }
-/*
-task generateServiceProxy(type: JavaCompile, description: 'Generates EBServiceProxies') {
-    source = sourceSets.main.java
-    classpath = configurations.compile
-    destinationDir = sourceSets.generated.java.srcDirs.iterator().next()
-    options.compilerArgs = [
-            "-proc:only",
-            "-processor", "io.vertx.codegen.CodeGenProcessor",
-            "-AoutputDirectory=$destinationDir"
-    ]
-}
-
 
 compileJava {
-    source sourceSets.main.java + sourceSets.generated.java
+    options.compilerArgs += [
+        "-AoutputDirectory=$projectDir/src/main",
+        "-processor", "io.vertx.codegen.CodeGenProcessor"
+    ]
+    classpath += configurations.annotationProcessor
 }
-compileJava.dependsOn generateServiceProxy
-
-clean {
-    delete += sourceSets.generated.java.srcDirs
-}
-*/

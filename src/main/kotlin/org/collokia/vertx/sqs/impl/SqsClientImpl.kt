@@ -17,7 +17,6 @@ import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
 import org.collokia.vertx.sqs.SqsClient
-import org.collokia.vertx.sqs.util.StringPair
 
 public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient {
 

@@ -6,3 +6,6 @@ build/
 /out/
 /.gradle/
 *.iws
+src/groovy
+src/resources/vertx-sqs-js
+src/asciidoc

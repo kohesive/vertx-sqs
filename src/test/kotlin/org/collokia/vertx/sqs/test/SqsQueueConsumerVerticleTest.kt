@@ -40,17 +40,17 @@ class SqsQueueConsumerVerticleTest {
         private var elasticNode: Node?     = null
 
         val config = JsonObject(mapOf(
-                // SQS client config
-                "host"      to ElasticMqHost,
-                "port"      to ElasticMqPort,
-                "accessKey" to "someAccessKey",
-                "secretKey" to "someSecretKey",
-                "region"    to "us-west-2",
+            // SQS client config
+            "host"      to ElasticMqHost,
+            "port"      to ElasticMqPort,
+            "accessKey" to "someAccessKey",
+            "secretKey" to "someSecretKey",
+            "region"    to "us-west-2",
 
-                // Consumer verticle config
-                "pollingInterval" to 1000,
-                "queueUrl"        to getQueueUrl("testQueue"),
-                "address"         to "sqs.queue.test"
+            // Consumer verticle config
+            "pollingInterval" to 1000,
+            "queueUrl"        to getQueueUrl("testQueue"),
+            "address"         to "sqs.queue.test"
         ))
 
         @BeforeClass
