@@ -6,7 +6,7 @@ import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.eventbus.Message
 import io.vertx.core.logging.LoggerFactory
-import org.collokia.vertx.sqs.SqsClient
+import kotlin.properties.Delegates
 
 class SqsQueueConsumerVerticle : AbstractVerticle() {
 
@@ -14,7 +14,7 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
         private val log = LoggerFactory.getLogger("SqsQueueConsumerVerticle")
     }
 
-    private var client: SqsClient? = null
+    private var client: SqsClient by Delegates.notNull()
     private var timerId: Long = -1
 
     override fun start(startFuture: Future<Void>) {
@@ -25,7 +25,7 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
 
         val pollingInterval = config().getLong("pollingInterval")
 
-        client?.start {
+        client.start {
             if (it.succeeded()) {
                 subscribe(pollingInterval, queueUrl, address)
                 startFuture.complete()
@@ -36,7 +36,7 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
     }
 
     private fun deleteMessage(queueUrl: String, reciept: String) {
-        client?.deleteMessage(queueUrl, reciept, Handler {
+        client.deleteMessage(queueUrl, reciept, Handler {
             if (it.failed()) {
                 log.warn("Unable to acknowledge message deletion with receipt = $reciept")
             }
@@ -45,7 +45,7 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
 
     private fun subscribe(pollingInterval: Long, queueUrl: String, address: String) {
         timerId = vertx.setPeriodic(pollingInterval) {
-            client?.receiveMessage(queueUrl, Handler {
+            client.receiveMessage(queueUrl, Handler {
                 if (it.succeeded()) {
                     log.debug("Polled ${it.result().size()} messages")
                     it.result().forEach { message ->
@@ -69,7 +69,7 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
 
     override fun stop(stopFuture: Future<Void>) {
         vertx.cancelTimer(timerId)
-        client?.stop {
+        client.stop {
             if (it.succeeded()) {
                 stopFuture.complete()
             } else {

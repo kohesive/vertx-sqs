@@ -17,6 +17,7 @@ import org.junit.runners.MethodSorters
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.platform.platformStatic
+import kotlin.properties.Delegates
 
 @RunWith(VertxUnitRunner::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -31,8 +32,8 @@ class SqsQueueConsumerVerticleTest {
 
         fun getQueueUrl(queueName: String) = "http://$ElasticMqHost:$ElasticMqPort/queue/$queueName"
 
-        private var client: SqsClient?        = null
-        private var sqsServer: SQSRestServer? = null
+        private var client: SqsClient by Delegates.notNull()
+        private var sqsServer: SQSRestServer by Delegates.notNull()
 
         val config = JsonObject(mapOf(
             // SQS client config
@@ -57,17 +58,17 @@ class SqsQueueConsumerVerticleTest {
 
             client = SqsClient.create(vertx, config)
             val latch = CountDownLatch(1)
-            client?.start(context.asyncAssertSuccess { latch.countDown() })
+            client.start(context.asyncAssertSuccess { latch.countDown() })
             latch.await(10, TimeUnit.SECONDS)
         }
 
         @AfterClass
         @platformStatic
         fun after(context: TestContext) {
-            client?.stop(context.asyncAssertSuccess())
+            client.stop(context.asyncAssertSuccess())
             vertx.close(context.asyncAssertSuccess())
 
-            sqsServer?.stopAndWait()
+            sqsServer.stopAndWait()
         }
     }
 
@@ -144,7 +145,7 @@ class SqsQueueConsumerVerticleTest {
     private fun TestContext.withClient(clientCode: (SqsClient) -> Unit) {
         val theClient = client
         this.assertNotNull(theClient)
-        clientCode(theClient!!)
+        clientCode(theClient)
     }
 
 }

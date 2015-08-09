@@ -18,6 +18,8 @@ import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
 import org.collokia.vertx.sqs.SqsClient
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.properties.Delegates
 
 public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient {
 
@@ -25,7 +27,9 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         private val log = LoggerFactory.getLogger(javaClass)
     }
 
-    private var client: AmazonSQSAsyncClient? = null
+    private var client: AmazonSQSAsyncClient by Delegates.notNull()
+
+    private var initialized = AtomicBoolean(false)
 
     override fun sendMessage(queueUrl: String, messageBody: String, resultHandler: Handler<AsyncResult<String>>) {
         sendMessage(queueUrl, messageBody, null, null, resultHandler)
@@ -201,10 +205,12 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
                 client = AmazonSQSAsyncClient(credentials)
 
                 val region = config.getString("region")
-                client?.setRegion(Region.getRegion(Regions.fromName(region)))
+                client.setRegion(Region.getRegion(Regions.fromName(region)))
                 if (config.getString("host") != null && config.getInteger("port") != null) {
-                    client?.setEndpoint("http://${ config.getString("host") }:${ config.getInteger("port") }")
+                    client.setEndpoint("http://${ config.getString("host") }:${ config.getInteger("port") }")
                 }
+
+                initialized.set(true)
 
                 future.complete()
             } catch (t: Throwable) {
@@ -214,9 +220,8 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     }
 
     private fun withClient(handler: (AmazonSQSAsyncClient) -> Unit) {
-        val theClient = client
-        if (theClient != null) {
-            handler(theClient)
+        if (initialized.get()) {
+            handler(client)
         } else {
             throw IllegalStateException("SQS client wasn't initialized")
         }

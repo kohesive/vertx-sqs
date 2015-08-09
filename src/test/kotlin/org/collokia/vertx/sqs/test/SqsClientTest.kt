@@ -16,6 +16,7 @@ import org.junit.runners.MethodSorters
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.platform.platformStatic
+import kotlin.properties.Delegates
 
 @RunWith(VertxUnitRunner::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -29,8 +30,8 @@ class SqsClientTest {
 
         fun getQueueUrl(queueName: String) = "http://$ElasticMqHost:$ElasticMqPort/queue/$queueName"
 
-        private var client: SqsClient?        = null
-        private var sqsServer: SQSRestServer? = null
+        private var client: SqsClient by Delegates.notNull()
+        private var sqsServer: SQSRestServer by Delegates.notNull()
 
         @BeforeClass
         @platformStatic
@@ -46,17 +47,17 @@ class SqsClientTest {
             )))
 
             val latch = CountDownLatch(1)
-            client?.start(context.asyncAssertSuccess { latch.countDown() })
+            client.start(context.asyncAssertSuccess { latch.countDown() })
             latch.await(10, TimeUnit.SECONDS)
         }
 
         @AfterClass
         @platformStatic
         fun after(context: TestContext) {
-            client?.stop(context.asyncAssertSuccess())
+            client.stop(context.asyncAssertSuccess())
             vertx.close(context.asyncAssertSuccess())
 
-            sqsServer?.stopAndWait()
+            sqsServer.stopAndWait()
         }
     }
 
@@ -81,12 +82,14 @@ class SqsClientTest {
             // Send
 
             val stringAttribute = "someString"
+            val stringAttribute2 = "someString2"
             val binaryAttribute = stringAttribute.toByteArray("UTF-8")
 
             val attributes = JsonObject()
                 .put("stringAttribute", JsonObject().put("dataType", "String").put("stringData", stringAttribute))
+                .put("stringAttribute2", JsonObject().put("dataType", "String").put("stringData", stringAttribute2))
                 // TODO: ElasticMQ fails to respond to binary attributes
-//                .put("binaryAttribute", JsonObject().put("dataType", "Binary").put("binaryData", binaryAttribute))
+                .put("binaryAttribute", JsonObject().put("dataType", "Binary").put("binaryData", binaryAttribute))
 
             client.sendMessage(queueName, messageBody, attributes, context.asyncAssertSuccess {
                 // Receive
@@ -99,6 +102,7 @@ class SqsClientTest {
                     val messageAttributes = theMessage?.getJsonObject("messageAttributes")
                     context.assertNotNull(messageAttributes)
                     context.assertEquals(stringAttribute, messageAttributes?.getJsonObject("stringAttribute")?.getString("stringData"))
+                    context.assertEquals(stringAttribute2, messageAttributes?.getJsonObject("stringAttribute2")?.getString("stringData"))
 
                     // Delete
                     val receipt = theMessage!!.getString("receiptHandle")
@@ -117,7 +121,7 @@ class SqsClientTest {
     private fun TestContext.withClient(clientCode: (SqsClient) -> Unit) {
         val theClient = client
         this.assertNotNull(theClient)
-        clientCode(theClient!!)
+        clientCode(theClient)
     }
 
 }
