@@ -13,6 +13,7 @@ import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
+import java.util.Arrays
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.platform.platformStatic
@@ -82,14 +83,12 @@ class SqsClientTest {
             // Send
 
             val stringAttribute = "someString"
-            val stringAttribute2 = "someString2"
             val binaryAttribute = stringAttribute.toByteArray("UTF-8")
 
             val attributes = JsonObject()
                 .put("stringAttribute", JsonObject().put("dataType", "String").put("stringData", stringAttribute))
-                .put("stringAttribute2", JsonObject().put("dataType", "String").put("stringData", stringAttribute2))
-                // TODO: ElasticMQ fails to respond to binary attributes
-                .put("binaryAttribute", JsonObject().put("dataType", "Binary").put("binaryData", binaryAttribute))
+                // TODO: uncomment when ElasticMQ supports binary attributes https://github.com/adamw/elasticmq/pull/54
+//                .put("binaryAttribute", JsonObject().put("dataType", "Binary").put("binaryData", binaryAttribute))
 
             client.sendMessage(queueName, messageBody, attributes, context.asyncAssertSuccess {
                 // Receive
@@ -102,7 +101,10 @@ class SqsClientTest {
                     val messageAttributes = theMessage?.getJsonObject("messageAttributes")
                     context.assertNotNull(messageAttributes)
                     context.assertEquals(stringAttribute, messageAttributes?.getJsonObject("stringAttribute")?.getString("stringData"))
-                    context.assertEquals(stringAttribute2, messageAttributes?.getJsonObject("stringAttribute2")?.getString("stringData"))
+
+                    // TODO: uncomment when ElasticMQ supports binary attributes
+//                    val receivedByteArray = messageAttributes?.getJsonObject("binaryAttribute")?.getBinary("binaryData")
+//                    context.assertTrue(Arrays.equals(binaryAttribute, receivedByteArray))
 
                     // Delete
                     val receipt = theMessage!!.getString("receiptHandle")

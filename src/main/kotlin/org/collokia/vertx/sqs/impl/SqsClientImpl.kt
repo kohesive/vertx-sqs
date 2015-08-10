@@ -171,7 +171,8 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
                 .apply {
                     if (messageAttribute.getValue().getBinaryValue() != null) {
                         this.put("binaryData", messageAttribute.getValue().getBinaryValue().let {
-                            val byteArray = ByteArray(it.remaining())
+                            it.clear()
+                            val byteArray = ByteArray(it.capacity())
                             it.get(byteArray)
                             byteArray
                         })
