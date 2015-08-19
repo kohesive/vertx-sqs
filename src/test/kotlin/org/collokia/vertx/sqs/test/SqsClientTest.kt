@@ -87,8 +87,7 @@ class SqsClientTest {
 
             val attributes = JsonObject()
                 .put("stringAttribute", JsonObject().put("dataType", "String").put("stringData", stringAttribute))
-                // TODO: uncomment when ElasticMQ supports binary attributes https://github.com/adamw/elasticmq/pull/54
-//                .put("binaryAttribute", JsonObject().put("dataType", "Binary").put("binaryData", binaryAttribute))
+                .put("binaryAttribute", JsonObject().put("dataType", "Binary").put("binaryData", binaryAttribute))
 
             client.sendMessage(queueName, messageBody, attributes, context.asyncAssertSuccess {
                 // Receive
@@ -102,9 +101,8 @@ class SqsClientTest {
                     context.assertNotNull(messageAttributes)
                     context.assertEquals(stringAttribute, messageAttributes?.getJsonObject("stringAttribute")?.getString("stringData"))
 
-                    // TODO: uncomment when ElasticMQ supports binary attributes
-//                    val receivedByteArray = messageAttributes?.getJsonObject("binaryAttribute")?.getBinary("binaryData")
-//                    context.assertTrue(Arrays.equals(binaryAttribute, receivedByteArray))
+                    val receivedByteArray = messageAttributes?.getJsonObject("binaryAttribute")?.getBinary("binaryData")
+                    context.assertTrue(Arrays.equals(binaryAttribute, receivedByteArray))
 
                     // Delete
                     val receipt = theMessage!!.getString("receiptHandle")
