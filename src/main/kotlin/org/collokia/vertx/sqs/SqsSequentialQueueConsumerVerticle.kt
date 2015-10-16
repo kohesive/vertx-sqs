@@ -39,36 +39,38 @@ class SqsSequentialQueueConsumerVerticle : AbstractVerticle(), SqsVerticle {
     }
 
     private fun subscribe(queueUrl: String, address: String, workersCount: Int) {
-        pool.invokeAll((1..workersCount).map {
-            Callable {
-                while (true) {
-                    val latch = CountDownLatch(1)
+        val callable = Callable {
+            while (true) {
+                val latch = CountDownLatch(1)
 
-                    client.receiveMessage(queueUrl) {
-                        if (it.succeeded()) {
-                            it.result().forEach { message ->
-                                val reciept = message.getString("receiptHandle")
+                client.receiveMessage(queueUrl) {
+                    if (it.succeeded()) {
+                        it.result().forEach { message ->
+                            val reciept = message.getString("receiptHandle")
 
-                                vertx.eventBus().send(address, message, Handler { ar: AsyncResult<Message<Void>> ->
-                                    if (ar.succeeded()) {
-                                        // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
-                                        deleteMessage(queueUrl, reciept)
-                                    } else {
-                                        log.warn("Message with receipt $reciept was failed to process by the consumer")
-                                    }
+                            vertx.eventBus().send(address, message, Handler { ar: AsyncResult<Message<Void>> ->
+                                if (ar.succeeded()) {
+                                    // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
+                                    deleteMessage(queueUrl, reciept)
+                                } else {
+                                    log.warn("Message with receipt $reciept was failed to process by the consumer")
+                                }
 
-                                    latch.countDown()
-                                })
-                            }
-                        } else {
-                            log.error("Unable to poll messages from $queueUrl", it.cause())
-                            latch.countDown()
+                                latch.countDown()
+                            })
                         }
+                    } else {
+                        log.error("Unable to poll messages from $queueUrl", it.cause())
+                        latch.countDown()
                     }
-
-                    latch.await()
                 }
+
+                latch.await()
             }
+        }
+
+        pool.invokeAll((1..workersCount).map {
+            callable // Can't inline here because of 'bad enclosing class' compiler error
         })
     }
 
