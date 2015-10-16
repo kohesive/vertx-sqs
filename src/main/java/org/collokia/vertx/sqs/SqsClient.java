@@ -67,6 +67,8 @@ public interface SqsClient {
      */
     void receiveMessage(String queueUrl, Handler<AsyncResult<List<JsonObject>>> resultHandler);
 
+    void receiveMessages(String queueUrl, Integer maxMessages, Handler<AsyncResult<List<JsonObject>>> resultHandler);
+
     void deleteMessage(String queueUrl, String receiptHandle, Handler<AsyncResult<Void>> resultHandler);
 
     void setQueueAttributes(String queueUrl, Map<String, String> attributes, Handler<AsyncResult<Void>> resultHandler);

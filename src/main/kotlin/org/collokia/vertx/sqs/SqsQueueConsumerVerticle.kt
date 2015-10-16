@@ -8,26 +8,25 @@ import io.vertx.core.eventbus.Message
 import io.vertx.core.logging.LoggerFactory
 import kotlin.properties.Delegates
 
-class SqsQueueConsumerVerticle : AbstractVerticle() {
+class SqsQueueConsumerVerticle : AbstractVerticle(), SqsVerticle {
 
-    companion object {
-        private val log = LoggerFactory.getLogger("SqsQueueConsumerVerticle")
-    }
+    override var client: SqsClient by Delegates.notNull()
+    override val log = LoggerFactory.getLogger("SqsQueueConsumerVerticle")
 
-    private var client: SqsClient by Delegates.notNull()
     private var timerId: Long = -1
 
     override fun start(startFuture: Future<Void>) {
         client = SqsClient.create(vertx, config())
 
-        val queueUrl = config().getString("queueUrl")
-        val address  = config().getString("address")
+        val queueUrl    = config().getString("queueUrl")
+        val address     = config().getString("address")
+        val maxMessages = config().getInteger("messagesPerPoll") ?: 1
 
         val pollingInterval = config().getLong("pollingInterval")
 
         client.start {
             if (it.succeeded()) {
-                subscribe(pollingInterval, queueUrl, address)
+                subscribe(pollingInterval, queueUrl, address, maxMessages)
                 startFuture.complete()
             } else {
                 startFuture.fail(it.cause())
@@ -35,17 +34,9 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
         }
     }
 
-    private fun deleteMessage(queueUrl: String, reciept: String) {
-        client.deleteMessage(queueUrl, reciept, Handler {
-            if (it.failed()) {
-                log.warn("Unable to acknowledge message deletion with receipt = $reciept")
-            }
-        })
-    }
-
-    private fun subscribe(pollingInterval: Long, queueUrl: String, address: String) {
+    private fun subscribe(pollingInterval: Long, queueUrl: String, address: String, maxMessages: Int) {
         timerId = vertx.setPeriodic(pollingInterval) {
-            client.receiveMessage(queueUrl, Handler {
+            client.receiveMessages(queueUrl, maxMessages) {
                 if (it.succeeded()) {
                     log.debug("Polled ${it.result().size()} messages")
                     it.result().forEach { message ->
@@ -63,7 +54,7 @@ class SqsQueueConsumerVerticle : AbstractVerticle() {
                 } else {
                     log.error("Unable to poll messages from $queueUrl", it.cause())
                 }
-            })
+            }
         }
     }
 
