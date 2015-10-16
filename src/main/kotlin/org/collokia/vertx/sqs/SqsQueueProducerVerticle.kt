@@ -2,6 +2,7 @@ package org.collokia.vertx.sqs
 
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
+import io.vertx.core.Handler
 import io.vertx.core.eventbus.Message
 import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
@@ -21,7 +22,7 @@ class SqsQueueProducerVerticle : AbstractVerticle(), SqsVerticle {
         client.start {
             if (it.succeeded()) {
                 // Start routing the messages
-                val consumer = vertx.eventBus().consumer(address) { message: Message<JsonObject> ->
+                val consumer = vertx.eventBus().consumer(address, Handler { message: Message<JsonObject> ->
                     client.sendMessage(queueUrl, address) {
                         if (it.succeeded()) {
                             message.reply(it.result())
@@ -29,7 +30,7 @@ class SqsQueueProducerVerticle : AbstractVerticle(), SqsVerticle {
                             message.fail(0, "Failed to submit SQS message: ${ it.cause()?.getMessage() }")
                         }
                     }
-                }
+                })
                 consumer.completionHandler {
                     if (it.succeeded()) {
                         startFuture.complete()
