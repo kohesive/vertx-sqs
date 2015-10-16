@@ -24,7 +24,7 @@ import kotlin.properties.Delegates
 public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient {
 
     companion object {
-        private val log = LoggerFactory.getLogger(javaClass)
+        private val log = LoggerFactory.getLogger(SqsClientImpl::class.java)
     }
 
     private var client: AmazonSQSAsyncClient by Delegates.notNull()
@@ -43,7 +43,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
         withClient { client ->
             val request = SendMessageRequest(queueUrl, messageBody).withDelaySeconds(delaySeconds)
 
-            request.setMessageAttributes(attributes?.getMap()?.mapValues {
+            request.messageAttributes = attributes?.map?.mapValues {
                 (it.getValue() as? JsonObject)?.let {
                     val type       = it.getString("dataType")
                     val stringData = it.getString("stringData")
@@ -51,18 +51,18 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
 
                     MessageAttributeValue().apply {
                         if (binaryData != null) {
-                            setBinaryValue(ByteBuffer.wrap(binaryData))
+                            binaryValue = ByteBuffer.wrap(binaryData)
                         }
                         if (stringData != null) {
-                            setStringValue(stringData)
+                            stringValue = stringData
                         }
-                        setDataType(type)
+                        dataType = type
                     }
                 }
-            })
+            }
 
             client.sendMessageAsync(request, resultHandler.withConverter { sqsResult ->
-                sqsResult.getMessageId()
+                sqsResult.messageId
             })
         }
     }
@@ -70,7 +70,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     override fun createQueue(name: String, attributes: MutableMap<String, String>, resultHandler: Handler<AsyncResult<String>>) {
         withClient { client ->
             client.createQueueAsync(CreateQueueRequest(name).withAttributes(attributes), resultHandler.withConverter { sqsResult ->
-                sqsResult.getQueueUrl()
+                sqsResult.queueUrl
             })
         }
     }
@@ -78,7 +78,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     override fun listQueues(namePrefix: String?, resultHandler: Handler<AsyncResult<List<String>>>) {
         withClient { client ->
             client.listQueuesAsync(ListQueuesRequest(namePrefix), resultHandler.withConverter { sqsResult ->
-                sqsResult.getQueueUrls()
+                sqsResult.queueUrls
             })
         }
     }
@@ -86,7 +86,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     override fun receiveMessage(queueUrl: String, resultHandler: Handler<AsyncResult<List<JsonObject>>>) {
         withClient { client ->
             client.receiveMessageAsync(ReceiveMessageRequest(queueUrl), resultHandler.withConverter { sqsResult ->
-                sqsResult.getMessages().map {
+                sqsResult.messages.map {
                     it.toJsonObject()
                 }
             })
@@ -126,7 +126,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     override fun getQueueUrl(queueName: String, queueOwnerAWSAccountId: String?, resultHandler: Handler<AsyncResult<String>>) {
         withClient { client ->
             client.getQueueUrlAsync(GetQueueUrlRequest(queueName).withQueueOwnerAWSAccountId(queueOwnerAWSAccountId), resultHandler.withConverter {
-                it.getQueueUrl()
+                it.queueUrl
             })
         }
     }
@@ -146,7 +146,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     override fun getQueueAttributes(queueUrl: String, attributeNames: List<String>?, resultHandler: Handler<AsyncResult<JsonObject>>) {
         withClient { client ->
             client.getQueueAttributesAsync(GetQueueAttributesRequest(queueUrl, attributeNames), resultHandler.withConverter {
-                JsonObject(it.getAttributes())
+                JsonObject(it.attributes as Map<String, Any>?)
             })
         }
     }
@@ -154,30 +154,30 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     override fun listDeadLetterSourceQueues(queueUrl: String, resultHandler: Handler<AsyncResult<List<String>>>) {
         withClient { client ->
             client.listDeadLetterSourceQueuesAsync(ListDeadLetterSourceQueuesRequest(queueUrl), resultHandler.withConverter {
-                it.getQueueUrls()
+                it.queueUrls
             })
         }
     }
 
     private fun Message.toJsonObject(): JsonObject = JsonObject()
-        .put("id", this.getMessageId())
-        .put("body", this.getBody())
-        .put("bodyMd5", this.getMD5OfBody())
-        .put("receiptHandle", this.getReceiptHandle())
-        .put("attributes", JsonObject(this.getAttributes()))
+        .put("id", this.messageId)
+        .put("body", this.body)
+        .put("bodyMd5", this.mD5OfBody)
+        .put("receiptHandle", this.receiptHandle)
+        .put("attributes", JsonObject(this.attributes as Map<String, Any>?))
         .put("messageAttributes", JsonObject(
-            this.getMessageAttributes().mapValues { messageAttribute -> JsonObject()
-                .put("dataType", messageAttribute.value.getDataType())
+            this.messageAttributes.mapValues { messageAttribute -> JsonObject()
+                .put("dataType", messageAttribute.value.dataType)
                 .apply {
-                    if (messageAttribute.getValue().getBinaryValue() != null) {
-                        this.put("binaryData", messageAttribute.getValue().getBinaryValue().let {
+                    if (messageAttribute.getValue().binaryValue != null) {
+                        this.put("binaryData", messageAttribute.getValue().binaryValue.let {
                             it.clear()
                             val byteArray = ByteArray(it.capacity())
                             it.get(byteArray)
                             byteArray
                         })
                     } else {
-                        this.put("stringData", messageAttribute.getValue().getStringValue())
+                        this.put("stringData", messageAttribute.getValue().stringValue)
                     }
                 }
             }
@@ -193,7 +193,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
                     BasicAWSCredentials(config.getString("accessKey"), config.getString("secretKey"))
                 } else {
                     try {
-                        ProfileCredentialsProvider().getCredentials()
+                        ProfileCredentialsProvider().credentials
                     } catch (t: Throwable) {
                         throw AmazonClientException(
                                 "Cannot load the credentials from the credential profiles file. " +

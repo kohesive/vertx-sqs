@@ -16,7 +16,6 @@ import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import kotlin.platform.platformStatic
 import kotlin.properties.Delegates
 
 @RunWith(VertxUnitRunner::class)
@@ -50,7 +49,7 @@ class SqsQueueConsumerVerticleTest {
         ))
 
         @BeforeClass
-        @platformStatic
+        @JvmStatic
         fun before(context: TestContext) {
             sqsServer = SQSRestServerBuilder.withPort(ElasticMqPort).start()
 
@@ -63,7 +62,7 @@ class SqsQueueConsumerVerticleTest {
         }
 
         @AfterClass
-        @platformStatic
+        @JvmStatic
         fun after(context: TestContext) {
             client.stop(context.asyncAssertSuccess())
             vertx.close(context.asyncAssertSuccess())
