@@ -30,44 +30,46 @@ class SqsSequentialQueueConsumerVerticle : AbstractVerticle(), SqsVerticle {
 
         client.start {
             if (it.succeeded()) {
-
-                pool.invokeAll((1..workersCount).map {
-                    Callable {
-                        while (true) {
-                            val latch = CountDownLatch(1)
-
-                            client.receiveMessage(queueUrl) {
-                                if (it.succeeded()) {
-                                    it.result().forEach { message ->
-                                        val reciept = message.getString("receiptHandle")
-
-                                        vertx.eventBus().send(address, message, Handler { ar: AsyncResult<Message<Void>> ->
-                                            if (ar.succeeded()) {
-                                                // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
-                                                deleteMessage(queueUrl, reciept)
-                                            } else {
-                                                log.warn("Message with receipt $reciept was failed to process by the consumer")
-                                            }
-
-                                            latch.countDown()
-                                        })
-                                    }
-                                } else {
-                                    log.error("Unable to poll messages from $queueUrl", it.cause())
-                                    latch.countDown()
-                                }
-                            }
-
-                            latch.await()
-                        }
-                    }
-                })
-
+                subscribe(queueUrl, address, workersCount)
                 startFuture.complete()
             } else {
                 startFuture.fail(it.cause())
             }
         }
+    }
+
+    private fun subscribe(queueUrl: String, address: String, workersCount: Int) {
+        pool.invokeAll((1..workersCount).map {
+            Callable {
+                while (true) {
+                    val latch = CountDownLatch(1)
+
+                    client.receiveMessage(queueUrl) {
+                        if (it.succeeded()) {
+                            it.result().forEach { message ->
+                                val reciept = message.getString("receiptHandle")
+
+                                vertx.eventBus().send(address, message, Handler { ar: AsyncResult<Message<Void>> ->
+                                    if (ar.succeeded()) {
+                                        // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
+                                        deleteMessage(queueUrl, reciept)
+                                    } else {
+                                        log.warn("Message with receipt $reciept was failed to process by the consumer")
+                                    }
+
+                                    latch.countDown()
+                                })
+                            }
+                        } else {
+                            log.error("Unable to poll messages from $queueUrl", it.cause())
+                            latch.countDown()
+                        }
+                    }
+
+                    latch.await()
+                }
+            }
+        })
     }
 
     override fun stop(stopFuture: Future<Void>) {
