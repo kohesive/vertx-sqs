@@ -5,7 +5,6 @@ import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.eventbus.Message
-import io.vertx.core.json.JsonObject
 import io.vertx.core.logging.LoggerFactory
 import org.collokia.vertx.sqs.impl.SqsClientImpl
 import kotlin.properties.Delegates
@@ -29,8 +28,8 @@ class SqsQueueProducerVerticle() : AbstractVerticle(), SqsVerticle {
         client.start {
             if (it.succeeded()) {
                 // Start routing the messages
-                val consumer = vertx.eventBus().consumer(address, Handler { message: Message<JsonObject> ->
-                    client.sendMessage(queueUrl, address) {
+                val consumer = vertx.eventBus().consumer(address, Handler { message: Message<String> ->
+                    client.sendMessage(queueUrl, message.body()) {
                         if (it.succeeded()) {
                             message.reply(it.result())
                         } else {
