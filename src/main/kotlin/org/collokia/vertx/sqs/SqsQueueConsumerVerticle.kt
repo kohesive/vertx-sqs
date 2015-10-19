@@ -1,14 +1,21 @@
 package org.collokia.vertx.sqs
 
+import com.amazonaws.auth.AWSCredentialsProvider
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.eventbus.Message
 import io.vertx.core.logging.LoggerFactory
+import org.collokia.vertx.sqs.impl.SqsClientImpl
 import kotlin.properties.Delegates
 
-class SqsQueueConsumerVerticle : AbstractVerticle(), SqsVerticle {
+class SqsQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
+
+    constructor(credentialsProvider: AWSCredentialsProvider) : this() {
+        this.credentialsProvider = credentialsProvider
+    }
+    override var credentialsProvider: AWSCredentialsProvider? = null
 
     override var client: SqsClient by Delegates.notNull()
     override val log = LoggerFactory.getLogger("SqsQueueConsumerVerticle")
@@ -16,7 +23,7 @@ class SqsQueueConsumerVerticle : AbstractVerticle(), SqsVerticle {
     private var timerId: Long = -1
 
     override fun start(startFuture: Future<Void>) {
-        client = SqsClient.create(vertx, config())
+        client = SqsClientImpl(vertx, config(), credentialsProvider)
 
         val queueUrl    = config().getString("queueUrl")
         val address     = config().getString("address")
