@@ -2,7 +2,7 @@ package org.collokia.vertx.sqs.impl
 
 import com.amazonaws.AmazonClientException
 import com.amazonaws.AmazonWebServiceRequest
-import com.amazonaws.auth.AWSCredentials
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.handlers.AsyncHandler
@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.properties.Delegates
 
-public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient {
+public class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProvider: AWSCredentialsProvider? = null) : SqsClient {
 
     companion object {
         private val log = LoggerFactory.getLogger(SqsClientImpl::class.java)
@@ -30,6 +30,23 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
     private var client: AmazonSQSAsyncClient by Delegates.notNull()
 
     private var initialized = AtomicBoolean(false)
+
+    private fun getCredentialsProvider(): AWSCredentialsProvider = credentialProvider ?: if (config.getString("accessKey") != null) {
+        object : AWSCredentialsProvider {
+            override fun getCredentials() = BasicAWSCredentials(config.getString("accessKey"), config.getString("secretKey"))
+            override fun refresh() {}
+        }
+    } else {
+        try {
+            ProfileCredentialsProvider()
+        } catch (t: Throwable) {
+            throw AmazonClientException(
+                "Cannot load the credentials from the credential profiles file. " +
+                "Please make sure that your credentials file is at the correct " +
+                "location (~/.aws/credentials), and is in valid format."
+            )
+        }
+    }
 
     override fun sendMessage(queueUrl: String, messageBody: String, resultHandler: Handler<AsyncResult<String>>) {
         sendMessage(queueUrl, messageBody, null, null, resultHandler)
@@ -193,21 +210,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject) : SqsClient
 
         vertx.executeBlocking(Handler { future ->
             try {
-                val credentials: AWSCredentials = if (config.getString("accessKey") != null) {
-                    BasicAWSCredentials(config.getString("accessKey"), config.getString("secretKey"))
-                } else {
-                    try {
-                        ProfileCredentialsProvider().credentials
-                    } catch (t: Throwable) {
-                        throw AmazonClientException(
-                                "Cannot load the credentials from the credential profiles file. " +
-                                        "Please make sure that your credentials file is at the correct " +
-                                        "location (~/.aws/credentials), and is in valid format."
-                        )
-                    }
-                }
-
-                client = AmazonSQSAsyncClient(credentials)
+                client = AmazonSQSAsyncClient(getCredentialsProvider())
 
                 val region = config.getString("region")
                 client.setRegion(Region.getRegion(Regions.fromName(region)))

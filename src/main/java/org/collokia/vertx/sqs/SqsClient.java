@@ -14,7 +14,7 @@ import java.util.Map;
 public interface SqsClient {
 
     static SqsClient create(Vertx vertx, JsonObject config) {
-        return new SqsClientImpl(vertx, config);
+        return new SqsClientImpl(vertx, config, null);
     }
 
     /**
