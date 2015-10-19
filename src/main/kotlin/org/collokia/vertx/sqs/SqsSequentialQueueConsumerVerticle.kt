@@ -8,7 +8,6 @@ import io.vertx.core.Handler
 import io.vertx.core.eventbus.Message
 import io.vertx.core.logging.LoggerFactory
 import org.collokia.vertx.sqs.impl.SqsClientImpl
-import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -46,7 +45,7 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
     }
 
     private fun subscribe(queueUrl: String, address: String, workersCount: Int) {
-        val callable = Callable {
+        val task = Runnable {
             while (true) {
                 val latch = CountDownLatch(1)
 
@@ -76,9 +75,11 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
             }
         }
 
-        pool.invokeAll((1..workersCount).map {
-            callable // Can't inline here because of 'bad enclosing class' compiler error
-        })
+
+        (1..workersCount).forEach {
+             // Can't inline here because of 'bad enclosing class' compiler error
+            pool.execute(task)
+        }
     }
 
     override fun stop(stopFuture: Future<Void>) {
