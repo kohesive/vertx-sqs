@@ -52,26 +52,30 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
             while (true) {
                 val latch = CountDownLatch(1)
 
-                client.receiveMessage(queueUrl) {
-                    if (it.succeeded()) {
-                        it.result().forEach { message ->
-                            val reciept = message.getString("receiptHandle")
+                try {
+                    client.receiveMessage(queueUrl) {
+                        if (it.succeeded()) {
+                            it.result().forEach { message ->
+                                val reciept = message.getString("receiptHandle")
 
-                            vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void>> ->
-                                if (ar.succeeded()) {
-                                    // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
-                                    deleteMessage(queueUrl, reciept)
-                                } else {
-                                    log.warn("Message with receipt $reciept was failed to process by the consumer")
-                                }
+                                vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void>> ->
+                                    if (ar.succeeded()) {
+                                        // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
+                                        deleteMessage(queueUrl, reciept)
+                                    } else {
+                                        log.warn("Message with receipt $reciept was failed to process by the consumer")
+                                    }
 
-                                latch.countDown()
-                            })
+                                    latch.countDown()
+                                })
+                            }
+                        } else {
+                            log.error("Unable to poll messages from $queueUrl", it.cause())
+                            latch.countDown()
                         }
-                    } else {
-                        log.error("Unable to poll messages from $queueUrl", it.cause())
-                        latch.countDown()
                     }
+                } catch (t: Throwable) {
+                    log.error("Error while polling messages from SQS queue")
                 }
 
                 latch.await(timeout + 100, TimeUnit.MILLISECONDS)
