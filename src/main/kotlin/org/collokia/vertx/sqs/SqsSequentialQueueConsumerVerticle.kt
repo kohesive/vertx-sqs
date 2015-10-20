@@ -5,6 +5,7 @@ import io.vertx.core.AbstractVerticle
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
+import io.vertx.core.eventbus.DeliveryOptions
 import io.vertx.core.eventbus.Message
 import io.vertx.core.logging.LoggerFactory
 import org.collokia.vertx.sqs.impl.SqsClientImpl
@@ -31,12 +32,13 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
         val queueUrl     = config().getString("queueUrl")
         val address      = config().getString("address")
         val workersCount = config().getInteger("workersCount")
+        val timeout      = config().getLong("timeout") ?: SqsVerticle.DefaultTimeout
 
         pool = Executors.newFixedThreadPool(workersCount)
 
         client.start {
             if (it.succeeded()) {
-                subscribe(queueUrl, address, workersCount)
+                subscribe(queueUrl, address, workersCount, timeout)
                 startFuture.complete()
             } else {
                 startFuture.fail(it.cause())
@@ -44,7 +46,7 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
         }
     }
 
-    private fun subscribe(queueUrl: String, address: String, workersCount: Int) {
+    private fun subscribe(queueUrl: String, address: String, workersCount: Int, timeout: Long) {
         val task = Runnable {
             while (true) {
                 val latch = CountDownLatch(1)
@@ -54,7 +56,7 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
                         it.result().forEach { message ->
                             val reciept = message.getString("receiptHandle")
 
-                            vertx.eventBus().send(address, message, Handler { ar: AsyncResult<Message<Void>> ->
+                            vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void>> ->
                                 if (ar.succeeded()) {
                                     // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
                                     deleteMessage(queueUrl, reciept)
