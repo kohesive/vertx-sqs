@@ -24,11 +24,12 @@ class SqsQueueProducerVerticle() : AbstractVerticle(), SqsVerticle {
 
         val queueUrl = config().getString("queueUrl")
         val address  = config().getString("address")
+        val local    = config().getBoolean("local") ?: false
 
         client.start {
             if (it.succeeded()) {
                 // Start routing the messages
-                val consumer = vertx.eventBus().consumer(address, Handler { message: Message<String> ->
+                val replyHandler = Handler { message: Message<String> ->
                     client.sendMessage(queueUrl, message.body()) {
                         if (it.succeeded()) {
                             message.reply(it.result())
@@ -36,7 +37,13 @@ class SqsQueueProducerVerticle() : AbstractVerticle(), SqsVerticle {
                             message.fail(0, "Failed to submit SQS message: ${ it.cause()?.message }")
                         }
                     }
-                })
+                }
+
+                val consumer = if (local) {
+                    vertx.eventBus().localConsumer(address, replyHandler)
+                } else {
+                    vertx.eventBus().consumer(address, replyHandler)
+                }
                 consumer.completionHandler {
                     if (it.succeeded()) {
                         startFuture.complete()
