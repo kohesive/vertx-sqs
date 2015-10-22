@@ -65,7 +65,6 @@ dependencies {
     compile "io.vertx:vertx-lang-groovy:$version_vertx"
     compile "io.vertx:vertx-lang-js:$version_vertx"
     compile "io.vertx:vertx-service-factory:$version_vertx"
-    compile "io.vertx:vertx-hazelcast:$version_vertx"
     compile "io.vertx:vertx-service-proxy:$version_vertx"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
