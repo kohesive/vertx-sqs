@@ -47,7 +47,7 @@ class SqsQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
         timerId = vertx.setPeriodic(pollingInterval) {
             client.receiveMessages(queueUrl, maxMessages) {
                 if (it.succeeded()) {
-                    log.debug("Polled ${it.result().size()} messages")
+                    log.debug("Polled ${it.result().size} messages")
                     it.result().forEach { message ->
                         val reciept = message.getString("receiptHandle")
 

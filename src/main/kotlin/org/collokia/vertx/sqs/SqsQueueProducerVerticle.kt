@@ -33,7 +33,7 @@ class SqsQueueProducerVerticle() : AbstractVerticle(), SqsVerticle {
                         if (it.succeeded()) {
                             message.reply(it.result())
                         } else {
-                            message.fail(0, "Failed to submit SQS message: ${ it.cause()?.getMessage() }")
+                            message.fail(0, "Failed to submit SQS message: ${ it.cause()?.message }")
                         }
                     }
                 })

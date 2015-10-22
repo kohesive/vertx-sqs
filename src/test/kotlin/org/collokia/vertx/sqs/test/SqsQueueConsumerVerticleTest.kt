@@ -133,7 +133,7 @@ class SqsQueueConsumerVerticleTest {
             }, context.asyncAssertSuccess() {
                 context.withClient { client ->
                     client.receiveMessage(testQueue, context.asyncAssertSuccess() { messages ->
-                        println("${ messages.size() } message(s) received: ${ messages.joinToString(", ") }")
+                        println("${ messages.size } message(s) received: ${ messages.joinToString(", ") }")
                         context.assertEquals(acknowledgeDelete, messages.isEmpty())
                     })
                 }
