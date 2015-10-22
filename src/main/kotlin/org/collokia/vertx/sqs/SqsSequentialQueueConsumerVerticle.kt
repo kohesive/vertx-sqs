@@ -13,6 +13,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.properties.Delegates
 
 class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
@@ -50,24 +51,31 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
     private fun subscribe(queueUrl: String, address: String, workersCount: Int, timeout: Long) {
         val task = Runnable {
             while (true) {
-                val latch = CountDownLatch(1)
+                val latch      = CountDownLatch(1)
+                val emptyQueue = AtomicBoolean(false)
 
                 try {
                     client.receiveMessage(queueUrl) {
                         if (it.succeeded()) {
-                            it.result().forEach { message ->
-                                val reciept = message.getString("receiptHandle")
+                            val messages = it.result()
+                            if (messages.isEmpty()) {
+                                emptyQueue.set(true)
+                                latch.countDown()
+                            } else {
+                                messages.forEach { message ->
+                                    val reciept = message.getString("receiptHandle")
 
-                                vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void?>> ->
-                                    if (ar.succeeded()) {
-                                        // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
-                                        deleteMessage(queueUrl, reciept)
-                                    } else {
-                                        log.warn("Message with receipt $reciept was failed to process by the consumer")
-                                    }
+                                    vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void?>> ->
+                                        if (ar.succeeded()) {
+                                            // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
+                                            deleteMessage(queueUrl, reciept)
+                                        } else {
+                                            log.warn("Message with receipt $reciept was failed to process by the consumer")
+                                        }
 
-                                    latch.countDown()
-                                })
+                                        latch.countDown()
+                                    })
+                                }
                             }
                         } else {
                             log.error("Unable to poll messages from $queueUrl", it.cause())
@@ -79,6 +87,10 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
                 }
 
                 latch.await(timeout + 100, TimeUnit.MILLISECONDS)
+
+                if (emptyQueue.get()) {
+                    Thread.sleep(2000)
+                }
             }
         }
 
