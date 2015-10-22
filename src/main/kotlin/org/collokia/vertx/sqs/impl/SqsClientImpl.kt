@@ -120,11 +120,11 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credent
         }
     }
 
-    override fun purgeQueue(queueUrl: String, resultHandler: Handler<AsyncResult<Void?>>) {
-        withClient { client ->
-            client.purgeQueueAsync(PurgeQueueRequest(queueUrl), resultHandler.toSqsHandler())
-        }
-    }
+//    override fun purgeQueue(queueUrl: String, resultHandler: Handler<AsyncResult<Void?>>) {
+//        withClient { client ->
+//            client.purgeQueueAsync(PurgeQueueRequest(queueUrl), resultHandler.toSqsHandler())
+//        }
+//    }
 
     override fun deleteMessage(queueUrl: String, receiptHandle: String, resultHandler: Handler<AsyncResult<Void?>>) {
         withClient { client ->
@@ -174,7 +174,7 @@ public class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credent
 
     override fun listDeadLetterSourceQueues(queueUrl: String, resultHandler: Handler<AsyncResult<List<String>>>) {
         withClient { client ->
-            client.listDeadLetterSourceQueuesAsync(ListDeadLetterSourceQueuesRequest(queueUrl), resultHandler.withConverter {
+            client.listDeadLetterSourceQueuesAsync(ListDeadLetterSourceQueuesRequest().apply { setQueueUrl(queueUrl) }, resultHandler.withConverter {
                 it.queueUrls
             })
         }

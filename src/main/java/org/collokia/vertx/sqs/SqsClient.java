@@ -89,7 +89,7 @@ public interface SqsClient {
      */
     void getQueueAttributes(String queueUrl, List<String> attributeNames, Handler<AsyncResult<JsonObject>> resultHandler);
 
-    void purgeQueue(String queueUrl, Handler<AsyncResult<Void>> resultHandler);
+//    void purgeQueue(String queueUrl, Handler<AsyncResult<Void>> resultHandler);
 
     void listDeadLetterSourceQueues(String queueUrl, Handler<AsyncResult<List<String>>> resultHandler);
 
