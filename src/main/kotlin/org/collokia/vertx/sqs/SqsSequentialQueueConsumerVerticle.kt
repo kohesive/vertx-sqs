@@ -58,7 +58,7 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
                             it.result().forEach { message ->
                                 val reciept = message.getString("receiptHandle")
 
-                                vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void>> ->
+                                vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void?>> ->
                                     if (ar.succeeded()) {
                                         // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
                                         deleteMessage(queueUrl, reciept)
@@ -81,7 +81,6 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
                 latch.await(timeout + 100, TimeUnit.MILLISECONDS)
             }
         }
-
 
         (1..workersCount).forEach {
              // Can't inline here because of 'bad enclosing class' compiler error
