@@ -9,10 +9,7 @@ import io.vertx.core.eventbus.DeliveryOptions
 import io.vertx.core.eventbus.Message
 import io.vertx.core.logging.LoggerFactory
 import org.collokia.vertx.sqs.impl.SqsClientImpl
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.properties.Delegates
 
@@ -26,21 +23,25 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
     override var client: SqsClient by Delegates.notNull()
     override val log = LoggerFactory.getLogger("SqsSequentialQueueConsumerVerticle")
 
-    private var pool : ExecutorService by Delegates.notNull()
+    private var pollingPool: ExecutorService by Delegates.notNull()
+    private var routingPool: ExecutorService by Delegates.notNull()
 
     override fun start(startFuture: Future<Void>) {
         client = SqsClientImpl(vertx, config(), credentialsProvider)
 
-        val queueUrl     = config().getString("queueUrl")
-        val address      = config().getString("address")
-        val workersCount = config().getInteger("workersCount")
-        val timeout      = config().getLong("timeout") ?: SqsVerticle.DefaultTimeout
+        val queueUrl        = config().getString("queueUrl")
+        val address         = config().getString("address")
+        val workersCount    = config().getInteger("workersCount")
+        val timeout         = config().getLong("timeout") ?: SqsVerticle.DefaultTimeout
+        val bufferSize      = config().getInteger("bufferSize") ?: (workersCount * 10)
+        val pollingInterval = config().getLong("pollingInterval") ?: 1000
 
-        pool = Executors.newFixedThreadPool(workersCount)
+        routingPool = Executors.newFixedThreadPool(workersCount)
+        pollingPool = Executors.newSingleThreadExecutor()
 
         client.start {
             if (it.succeeded()) {
-                subscribe(queueUrl, address, workersCount, timeout)
+                subscribe(queueUrl, address, workersCount, timeout, bufferSize, pollingInterval)
                 startFuture.complete()
             } else {
                 startFuture.fail(it.cause())
@@ -48,60 +49,71 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
         }
     }
 
-    private fun subscribe(queueUrl: String, address: String, workersCount: Int, timeout: Long) {
-        val task = Runnable {
+    private fun subscribe(queueUrl: String, address: String, workersCount: Int, timeout: Long, bufferSize: Int, pollingInterval: Long) {
+        val buffer = LinkedBlockingQueue<SqsMessage>()
+
+        pollingPool.execute {
             while (true) {
                 val latch      = CountDownLatch(1)
                 val emptyQueue = AtomicBoolean(false)
 
-                try {
-                    client.receiveMessage(queueUrl) {
-                        if (it.succeeded()) {
-                            val messages = it.result()
-                            if (messages.isEmpty()) {
-                                emptyQueue.set(true)
-                                latch.countDown()
-                            } else {
-                                messages.forEach { message ->
-                                    val reciept = message.getString("receiptHandle")
-
-                                    vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void?>> ->
-                                        if (ar.succeeded()) {
-                                            // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
-                                            deleteMessage(queueUrl, reciept)
-                                        } else {
-                                            log.warn("Message with receipt $reciept was failed to process by the consumer")
-                                        }
-
-                                        latch.countDown()
-                                    })
-                                }
-                            }
-                        } else {
-                            log.error("Unable to poll messages from $queueUrl", it.cause())
+                client.receiveMessages(queueUrl, bufferSize) {
+                    if (it.succeeded()) {
+                        val messages = it.result()
+                        if (messages.isEmpty()) {
+                            emptyQueue.set(true)
                             latch.countDown()
+                        } else {
+                            it.result().map { jsonMessage ->
+                                SqsMessage(
+                                    receipt = jsonMessage.getString("receiptHandle"),
+                                    message = jsonMessage
+                                )
+                            }.forEach {
+                                buffer.offer(it)
+                            }
                         }
                     }
-                } catch (t: Throwable) {
-                    log.error("Error while polling messages from SQS queue")
                 }
 
-                latch.await(timeout + 100, TimeUnit.MILLISECONDS)
+                latch.countDown()
 
                 if (emptyQueue.get()) {
-                    Thread.sleep(2000)
+                    Thread.sleep(5000)
+                } else {
+                    Thread.sleep(pollingInterval)
                 }
             }
         }
 
+        // Can't inline here because of 'bad enclosing class' compiler error
+        val routingTask = {
+            while (true) {
+                val sqsMessage = buffer.take()
+                val latch = CountDownLatch(1)
+
+                vertx.eventBus().send(address, sqsMessage.message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void?>> ->
+                    if (ar.succeeded()) {
+                        // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
+                        deleteMessage(queueUrl, sqsMessage.receipt)
+                    } else {
+                        log.warn("Message with receipt ${ sqsMessage.receipt } was failed to process by the consumer")
+                    }
+
+                    latch.countDown()
+                })
+
+                latch.await(100 + timeout, TimeUnit.MILLISECONDS)
+            }
+        }
         (1..workersCount).forEach {
-             // Can't inline here because of 'bad enclosing class' compiler error
-            pool.execute(task)
+            routingPool.execute(routingTask)
         }
     }
 
     override fun stop(stopFuture: Future<Void>) {
-        pool.shutdown()
+        routingPool.shutdown()
+        pollingPool.shutdown()
 
         client.stop {
             if (it.succeeded()) {
