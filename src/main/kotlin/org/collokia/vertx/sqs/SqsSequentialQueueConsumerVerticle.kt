@@ -33,7 +33,7 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
         val address         = config().getString("address")
         val workersCount    = config().getInteger("workersCount")
         val timeout         = config().getLong("timeout") ?: SqsVerticle.DefaultTimeout
-        val bufferSize      = config().getInteger("bufferSize") ?: (workersCount * 10)
+        val bufferSize      = (config().getInteger("bufferSize") ?: (workersCount * 10)).let { if (it > 10) 10 else it }
         val pollingInterval = config().getLong("pollingInterval") ?: 1000
 
         routingPool = Executors.newFixedThreadPool(workersCount)
