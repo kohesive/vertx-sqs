@@ -58,25 +58,28 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
                 val emptyQueue = AtomicBoolean(false)
 
                 client.receiveMessages(queueUrl, bufferSize) {
-                    if (it.succeeded()) {
-                        val messages = it.result()
-                        if (messages.isEmpty()) {
-                            emptyQueue.set(true)
-                            latch.countDown()
-                        } else {
-                            it.result().map { jsonMessage ->
-                                SqsMessage(
-                                    receipt = jsonMessage.getString("receiptHandle"),
-                                    message = jsonMessage
-                                )
-                            }.forEach {
-                                buffer.offer(it)
+                    try {
+                        if (it.succeeded()) {
+                            val messages = it.result()
+                            if (messages.isEmpty()) {
+                                emptyQueue.set(true)
+                            } else {
+                                it.result().map { jsonMessage ->
+                                    SqsMessage(
+                                        receipt = jsonMessage.getString("receiptHandle"),
+                                        message = jsonMessage
+                                    )
+                                }.forEach {
+                                    buffer.offer(it)
+                                }
                             }
                         }
+                    } finally {
+                        latch.countDown()
                     }
                 }
 
-                latch.countDown()
+                latch.await()
 
                 if (emptyQueue.get()) {
                     Thread.sleep(5000)
