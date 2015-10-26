@@ -73,6 +73,8 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
                                     buffer.offer(it)
                                 }
                             }
+                        } else {
+                            log.error("Can't poll messages from $queueUrl", it.cause())
                         }
                     } finally {
                         latch.countDown()

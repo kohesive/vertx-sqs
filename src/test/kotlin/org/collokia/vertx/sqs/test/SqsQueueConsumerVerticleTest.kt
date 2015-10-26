@@ -45,7 +45,8 @@ class SqsQueueConsumerVerticleTest {
             // Consumer verticle config
             "pollingInterval" to 1000,
             "queueUrl"        to getQueueUrl("testQueue"),
-            "address"         to "sqs.queue.test"
+            "address"         to "sqs.queue.test",
+            "workersCount"    to 1
         ))
 
         @BeforeClass
@@ -79,7 +80,7 @@ class SqsQueueConsumerVerticleTest {
             client.createQueue("testQueue", mapOf("VisibilityTimeout" to "1"), context.asyncAssertSuccess() { queueUrl ->
                 context.assertEquals(queueUrl, getQueueUrl("testQueue"))
 
-                vertx.deployVerticle("org.collokia.vertx.sqs.SqsQueueConsumerVerticle", DeploymentOptions().setConfig(config), context.asyncAssertSuccess() {
+                vertx.deployVerticle("org.collokia.vertx.sqs.SqsSequentialQueueConsumerVerticle", DeploymentOptions().setConfig(config), context.asyncAssertSuccess() {
                     deploymentId = it
                 })
             })
