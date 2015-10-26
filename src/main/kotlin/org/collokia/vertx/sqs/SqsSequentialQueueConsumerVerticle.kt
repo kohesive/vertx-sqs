@@ -54,37 +54,41 @@ class SqsSequentialQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
 
         pollingPool.execute {
             while (true) {
-                val latch      = CountDownLatch(1)
-                val emptyQueue = AtomicBoolean(false)
+                if (buffer.isEmpty()) {
+                    val latch      = CountDownLatch(1)
+                    val emptyQueue = AtomicBoolean(false)
 
-                client.receiveMessages(queueUrl, bufferSize) {
-                    try {
-                        if (it.succeeded()) {
-                            val messages = it.result()
-                            if (messages.isEmpty()) {
-                                emptyQueue.set(true)
-                            } else {
-                                it.result().map { jsonMessage ->
-                                    SqsMessage(
-                                        receipt = jsonMessage.getString("receiptHandle"),
-                                        message = jsonMessage
-                                    )
-                                }.forEach {
-                                    buffer.offer(it)
+                    client.receiveMessages(queueUrl, bufferSize) {
+                        try {
+                            if (it.succeeded()) {
+                                val messages = it.result()
+                                if (messages.isEmpty()) {
+                                    emptyQueue.set(true)
+                                } else {
+                                    it.result().map { jsonMessage ->
+                                        SqsMessage(
+                                            receipt = jsonMessage.getString("receiptHandle"),
+                                            message = jsonMessage
+                                        )
+                                    }.forEach {
+                                        buffer.offer(it)
+                                    }
                                 }
+                            } else {
+                                log.error("Can't poll messages from $queueUrl", it.cause())
                             }
-                        } else {
-                            log.error("Can't poll messages from $queueUrl", it.cause())
+                        } finally {
+                            latch.countDown()
                         }
-                    } finally {
-                        latch.countDown()
                     }
-                }
 
-                latch.await()
+                    latch.await()
 
-                if (emptyQueue.get()) {
-                    Thread.sleep(5000)
+                    if (emptyQueue.get()) {
+                        Thread.sleep(5000)
+                    } else {
+                        Thread.sleep(pollingInterval)
+                    }
                 } else {
                     Thread.sleep(pollingInterval)
                 }
