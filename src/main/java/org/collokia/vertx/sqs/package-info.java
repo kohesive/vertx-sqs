@@ -1,4 +1,4 @@
-@GenModule(name = "vertx-sqs", groupPackageName = "org.collokia.vertx")
+@ModuleGen(name = "vertx-sqs", groupPackage = "org.collokia.vertx")
 package org.collokia.vertx.sqs;
 
-import io.vertx.codegen.annotations.GenModule;
+import io.vertx.codegen.annotations.ModuleGen;

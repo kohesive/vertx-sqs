@@ -75,6 +75,7 @@ dependencies {
 
     annotationProcessor "io.vertx:vertx-codegen:$version_vertx"
 
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlinVersion"
     testCompile "org.elasticmq:elasticmq-core_2.11:$version_elasticmq"
     testCompile "org.elasticmq:elasticmq-rest-sqs_2.11:$version_elasticmq"
     testCompile "junit:junit:$version_junit"
