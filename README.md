@@ -66,6 +66,10 @@ vertx.eventBus().consumer("sqs.queue.MyQueue", message -> {
 });
 ```
 
+### Sequential consumer verticle
+
+`SqsSequentialQueueConsumerVerticle` is used to limit the SQS messages consumption rate. It uses a thread pool of size configured by `workersCount` parameters to fetch messages from the queue, and waiting for message acknowledgment (see above) before fetching more messages. Messages are buffered, the buffer size is configured by `bufferSize` parameter.
+
 ## Message producer verticle usage
 
 An SQS message producer verticle can be configured to route the event bus messages to an SQS queue. The verticle is deployed with a config containing AWS credentials (see above), region, SQS queue url, Vert.x address and a `local` flag, which specifies whether or not the vertcle should start a local message consumer (`false` by default):
