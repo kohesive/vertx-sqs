@@ -82,7 +82,7 @@ class SqsClientTest {
             // Send
 
             val stringAttribute = "someString"
-            val binaryAttribute = stringAttribute.toByteArray("UTF-8")
+            val binaryAttribute = stringAttribute.toByteArray()
 
             val attributes = JsonObject()
                 .put("stringAttribute", JsonObject().put("dataType", "String").put("stringData", stringAttribute))
