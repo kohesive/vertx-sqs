@@ -1,0 +1,22 @@
+ext {
+    projectUrl ="https://github.com/kohesive/vertx-sqs"
+    projectName = "Vertx-SQS"
+    projectDescription = 'Connecting Vertx and AWS SQS'
+    projectInception = '2015'
+
+    sonatypePackageGroup = "uy.kohesive"
+    sonatypeStagingProfile = "283dd0bd283334"
+    scmUrl = "git://github.com:kohesive/vertx-sqs.git"
+    scmGitFile = "scm:git@github.com:kohesive/vertx-sqs.git"
+
+    pomProjectName = projectName
+    groupName = project.group
+
+    licenseName = "MIT"
+    licenseUrl = "$projectUrl/blob/master/LICENSE"
+
+    organisation = groupName
+    primaryEmail = "oss@kohesive.io"
+
+    binTrayRepo = "kohesive"
+}

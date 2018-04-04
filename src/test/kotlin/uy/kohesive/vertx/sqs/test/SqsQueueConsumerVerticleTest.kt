@@ -1,4 +1,4 @@
-package org.collokia.vertx.sqs.test
+package uy.kohesive.vertx.sqs.test
 
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Future
@@ -8,7 +8,7 @@ import io.vertx.core.eventbus.Message
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.collokia.vertx.sqs.SqsClient
+import uy.kohesive.vertx.sqs.SqsClient
 import org.elasticmq.rest.sqs.SQSRestServer
 import org.elasticmq.rest.sqs.SQSRestServerBuilder
 import org.junit.*
@@ -29,7 +29,7 @@ class SqsQueueConsumerVerticleTest {
         val ElasticMqPort = 9324
         val ElasticMqHost = "localhost"
 
-        fun getQueueUrl(queueName: String) = "http://$ElasticMqHost:$ElasticMqPort/queue/$queueName"
+        fun getQueueUrl(queueName: String) = "http://${ElasticMqHost}:${ElasticMqPort}/queue/$queueName"
 
         private var client: SqsClient by Delegates.notNull()
         private var sqsServer: SQSRestServer by Delegates.notNull()
@@ -51,11 +51,16 @@ class SqsQueueConsumerVerticleTest {
         @BeforeClass
         @JvmStatic
         fun before(context: TestContext) {
-            sqsServer = SQSRestServerBuilder.withPort(ElasticMqPort).start()
+            sqsServer = SQSRestServerBuilder.withPort(
+                ElasticMqPort
+            ).start()
 
             println("Started SQS server")
 
-            client = SqsClient.create(vertx, config)
+            client = SqsClient.create(
+                vertx,
+                config
+            )
             val latch = CountDownLatch(1)
             client.start(context.asyncAssertSuccess { latch.countDown() })
             latch.await(10, TimeUnit.SECONDS)
@@ -77,9 +82,13 @@ class SqsQueueConsumerVerticleTest {
     fun beforeTest(context: TestContext) {
         context.withClient { client ->
             client.createQueue("testQueue", mapOf("VisibilityTimeout" to "1"), context.asyncAssertSuccess() { queueUrl ->
-                context.assertEquals(queueUrl, getQueueUrl("testQueue"))
+                context.assertEquals(queueUrl,
+                    getQueueUrl("testQueue")
+                )
 
-                vertx.deployVerticle("org.collokia.vertx.sqs.SqsQueueConsumerVerticle", DeploymentOptions().setConfig(config), context.asyncAssertSuccess() {
+                vertx.deployVerticle("uy.kohesive.vertx.sqs.SqsQueueConsumerVerticle", DeploymentOptions().setConfig(
+                    config
+                ), context.asyncAssertSuccess() {
                     deploymentId = it
                 })
             })

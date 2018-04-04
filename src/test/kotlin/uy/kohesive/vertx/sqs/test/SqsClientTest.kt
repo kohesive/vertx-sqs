@@ -1,10 +1,10 @@
-package org.collokia.vertx.sqs.test
+package uy.kohesive.vertx.sqs.test
 
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.collokia.vertx.sqs.SqsClient
+import uy.kohesive.vertx.sqs.SqsClient
 import org.elasticmq.rest.sqs.SQSRestServer
 import org.elasticmq.rest.sqs.SQSRestServerBuilder
 import org.junit.AfterClass
@@ -28,7 +28,7 @@ class SqsClientTest {
         val ElasticMqPort = 9324
         val ElasticMqHost = "localhost"
 
-        fun getQueueUrl(queueName: String) = "http://$ElasticMqHost:$ElasticMqPort/queue/$queueName"
+        fun getQueueUrl(queueName: String) = "http://${ElasticMqHost}:${ElasticMqPort}/queue/$queueName"
 
         private var client: SqsClient by Delegates.notNull()
         private var sqsServer: SQSRestServer by Delegates.notNull()
@@ -38,7 +38,8 @@ class SqsClientTest {
         fun before(context: TestContext) {
             sqsServer = SQSRestServerBuilder.withPort(ElasticMqPort).start()
 
-            client = SqsClient.create(vertx, JsonObject(mapOf(
+            client = SqsClient.create(
+                vertx, JsonObject(mapOf(
                 "host"      to ElasticMqHost,
                 "port"      to ElasticMqPort,
                 "accessKey" to "someAccessKey",
@@ -67,7 +68,10 @@ class SqsClientTest {
             client.createQueue("testQueue", mapOf(), context.asyncAssertSuccess {
                 client.listQueues(null, context.asyncAssertSuccess { queues ->
                     println(queues)
-                    context.assertTrue(queues.firstOrNull { it == getQueueUrl("testQueue") } != null)
+                    context.assertTrue(queues.firstOrNull { it == getQueueUrl(
+                        "testQueue"
+                    )
+                    } != null)
                 })
             })
         }

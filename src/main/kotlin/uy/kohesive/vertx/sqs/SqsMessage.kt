@@ -1,4 +1,4 @@
-package org.collokia.vertx.sqs
+package uy.kohesive.vertx.sqs
 
 import io.vertx.core.json.JsonObject
 

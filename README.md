@@ -1,3 +1,4 @@
+[![Kotlin](https://img.shields.io/badge/kotlin-1.2.31-blue.svg)](http://kotlinlang.org)  [![Maven Central](https://img.shields.io/maven-central/v/uy.kohesive.vertx/vertx-sqs.svg)](https://mvnrepository.com/artifact/uy.kohesive.sqs) [![CircleCI branch](https://img.shields.io/circleci/project/kohesive/vertx-sqs/master.svg)](https://circleci.com/gh/kohesive/vertx-sqs/tree/master) [![Issues](https://img.shields.io/github/issues/kohesive/vertx-sqs.svg)](https://github.com/kohesive/vertx-sqs/issues?q=is%3Aopen) [![DUB](https://img.shields.io/dub/l/vibe-d.svg)](https://github.com/kohesive/vertx-sqs/blob/master/LICENSE) [![Kotlin Slack](https://img.shields.io/badge/chat-kotlin%20slack%20%23kohesive-orange.svg)](http://kotlinslackin.herokuapp.com)
 
 # Amazon SQS Client for Vert.x
 
@@ -5,6 +6,15 @@ This Vert.x client allows Amazon SQS access in two ways:
 
 * As a @VertxGen service bridge to Amazon SQS Async Client methods
 * As an Amazon SQS queue consuming verticle
+
+### Gradle /Maven
+
+Add add the following dependency:
+
+```
+uy.kohesive.vertx:vertx-sqs:1.0.0-BETA-01
+```
+
 
 ## Service usage
 
@@ -51,7 +61,7 @@ JsonObject config = new JsonObject()
     .put("queueUrl", "https://sqs.us-west-2.amazonaws.com/1000/MyQueue")
     .put("address", "sqs.queue.MyQueue");
     
-vertx.deployVerticle("org.collokia.vertx.sqs.SqsQueueConsumerVerticle", new DeploymentOptions().setConfig(config));    
+vertx.deployVerticle("uy.kohesive.vertx.sqs.SqsQueueConsumerVerticle", new DeploymentOptions().setConfig(config));    
 ```
 
 When the verticle is successfully deployed, it starts polling the SQS and routing the messages to the Vert.x address configured.
@@ -83,7 +93,7 @@ JsonObject config = new JsonObject()
     .put("address", "sqs.queue.MyQueue")
     .put("local", true);
     
-vertx.deployVerticle("org.collokia.vertx.sqs.SqsQueueProducerVerticle", new DeploymentOptions().setConfig(config));    
+vertx.deployVerticle("uy.kohesive.vertx.sqs.SqsQueueProducerVerticle", new DeploymentOptions().setConfig(config));    
 ```
 
 When the verticle is successfully deployed, it starts routing the event-bus messages (message body is expected to be of String type) from the event-bus address configured to the SQS queue.

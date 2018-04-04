@@ -1,8 +1,4 @@
-description "Collokia's Vertx-SQS Integration"
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '2.13'
-}
+apply from: "$rootDir/project-settings.gradle"
 
 buildscript {
     repositories {
@@ -11,21 +7,28 @@ buildscript {
             url 'http://oss.sonatype.org/content/repositories/snapshots'
         }
         mavenCentral()
-        /*
         maven {
-            url 'http://dl.bintray.com/kotlin/kotlin-eap'
+            url "https://plugins.gradle.org/m2/"
         }
-        */
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        classpath "net.ltgt.gradle:gradle-apt-plugin:0.13"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.11.0"
     }
 }
 
-apply plugin: 'kotlin'
-apply plugin: 'idea'
+apply from: "$rootDir/gradle/sonatype-top.gradle"
+
+apply from: "$rootDir/gradle/kotlin-settings.gradle"
 apply plugin: 'groovy'
-apply plugin: 'maven-publish'
+apply plugin: 'net.ltgt.apt'
+
+apply from: "$rootDir/gradle/idea.gradle"
+apply from: "$rootDir/gradle/sonatype-subproj.gradle"
+apply from: "$rootDir/gradle/bintray.gradle"
+
 
 if (!JavaVersion.current().java8Compatible) {
     throw new IllegalStateException('''A Haiku:
@@ -34,98 +37,41 @@ if (!JavaVersion.current().java8Compatible) {
                                       |  Refresh. Try again.'''.stripMargin())
 }
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
-
 repositories {
     mavenCentral()
     maven {
         url = 'http://oss.sonatype.org/content/repositories/snapshots/'
     }
-    /*
-    maven {
-        url 'http://dl.bintray.com/kotlin/kotlin-eap'
-    }
-    maven {
-        url 'http://dl.bintray.com/jaysonminard/kohesive'
-    }
-    maven {
-        url 'http://dl.bintray.com/mplatvoet/komponents'
-    }
-    */
-}
-
-configurations {
-    annotationProcessor
-}
-
-ext {
-    generatedSrcDir = "$projectDir/src/generated"
-}
-
-sourceSets {
-    main {
-        groovy {
-            srcDir "$generatedSrcDir/groovy"
-        }
-        resources {
-            srcDir "$generatedSrcDir/resources"
-        }
-    }
 }
 
 dependencies {
     compile "io.vertx:vertx-core:$version_vertx"
-    compile "io.vertx:vertx-unit:$version_vertx"
-    compile "io.vertx:vertx-codegen:$version_vertx"
     compile "io.vertx:vertx-lang-groovy:$version_vertx"
     compile "io.vertx:vertx-lang-js:$version_vertx"
     compile "io.vertx:vertx-service-factory:$version_vertx"
     compile "io.vertx:vertx-service-proxy:$version_vertx"
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
 
     compile "com.amazonaws:aws-java-sdk-sqs:$version_sqs"
 
     compile "nl.komponents.kovenant:kovenant:$version_kovenant"
 
-    annotationProcessor "io.vertx:vertx-codegen:$version_vertx"
+    compileOnly "io.vertx:vertx-codegen:$version_vertx"
+    apt "io.vertx:vertx-codegen:$version_vertx"
+    apt "io.vertx:vertx-codegen:$version_vertx:processor"
 
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlinVersion"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion"
+
+    testCompile "io.vertx:vertx-unit:$version_vertx"
+
     testCompile "org.elasticmq:elasticmq-core_2.11:$version_elasticmq"
     testCompile "org.elasticmq:elasticmq-rest-sqs_2.11:$version_elasticmq"
     testCompile "junit:junit:$version_junit"
 }
 
-task cleanGenerated(type: Delete) {
-    delete generatedSrcDir
+task wrapper(type: Wrapper) {
+    gradleVersion = "$version_gradle"
 }
 
-compileJava {
-    dependsOn cleanGenerated
-    doFirst {
-        mkdir generatedSrcDir
-    }
-    options.compilerArgs += [
-            "-AoutputDirectory=$generatedSrcDir",
-            "-processor", "io.vertx.codegen.CodeGenProcessor"
-    ]
-    classpath += configurations.annotationProcessor
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-        }
-    }
-    repositories {
-        maven {
-            url "https://collokia.artifactoryonline.com/collokia/collokia-internal"
-            credentials {
-                username "${collokiaRepoUser}"
-                password "${collokiaRepoPass}"
-            }
-        }
-    }
-}
+defaultTasks 'clean', 'build', 'check'

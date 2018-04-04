@@ -1,4 +1,4 @@
-package org.collokia.vertx.sqs
+package uy.kohesive.vertx.sqs
 
 import com.amazonaws.auth.AWSCredentialsProvider
 import io.vertx.core.logging.Logger

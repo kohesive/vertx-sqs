@@ -1,4 +1,4 @@
-package org.collokia.vertx.sqs
+package uy.kohesive.vertx.sqs
 
 import com.amazonaws.auth.AWSCredentialsProvider
 import io.vertx.core.AbstractVerticle
@@ -6,7 +6,7 @@ import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.eventbus.Message
 import io.vertx.core.logging.LoggerFactory
-import org.collokia.vertx.sqs.impl.SqsClientImpl
+import uy.kohesive.vertx.sqs.impl.SqsClientImpl
 import kotlin.properties.Delegates
 
 class SqsQueueProducerVerticle() : AbstractVerticle(), SqsVerticle {
