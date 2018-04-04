@@ -23,7 +23,7 @@ public interface SqsClient {
      */
     void createQueue(String name, Map<String, String> attributes, Handler<AsyncResult<String>> resultHandler);
 
-    void deleteQueue(String queueUrl, Handler<AsyncResult<Unit>> resultHandler);
+    void deleteQueue(String queueUrl, Handler<AsyncResult<Void>> resultHandler);
 
     /**
      * Async result is a list of queues' URLs. 'namePrefix' is nullable.
@@ -70,32 +70,32 @@ public interface SqsClient {
 
     void receiveMessages(String queueUrl, Integer maxMessages, Handler<AsyncResult<List<JsonObject>>> resultHandler);
 
-    void deleteMessage(String queueUrl, String receiptHandle, Handler<AsyncResult<Unit>> resultHandler);
+    void deleteMessage(String queueUrl, String receiptHandle, Handler<AsyncResult<Void>> resultHandler);
 
-    void setQueueAttributes(String queueUrl, Map<String, String> attributes, Handler<AsyncResult<Unit>> resultHandler);
+    void setQueueAttributes(String queueUrl, Map<String, String> attributes, Handler<AsyncResult<Void>> resultHandler);
 
-    void changeMessageVisibility(String queueUrl, String receiptHandle, Integer visibilityTimeout, Handler<AsyncResult<Unit>> resultHandler);
+    void changeMessageVisibility(String queueUrl, String receiptHandle, Integer visibilityTimeout, Handler<AsyncResult<Void>> resultHandler);
 
     /**
      * Async result is the queue's URL. 'queueOwnerAWSAccountId' is nullable.
      */
     void getQueueUrl(String queueName, String queueOwnerAWSAccountId, Handler<AsyncResult<String>> resultHandler);
 
-    void addPermissionAsync(String queueUrl, String label, List<String> aWSAccountIds, List<String> actions, Handler<AsyncResult<Unit>> resultHandler);
+    void addPermissionAsync(String queueUrl, String label, List<String> aWSAccountIds, List<String> actions, Handler<AsyncResult<Void>> resultHandler);
 
-    void removePermission(String queueUrl, String label, Handler<AsyncResult<Unit>> resultHandler);
+    void removePermission(String queueUrl, String label, Handler<AsyncResult<Void>> resultHandler);
 
     /**
      * Async result is the attributes' keys/values map. 'attributeNames' is nullable.
      */
     void getQueueAttributes(String queueUrl, List<String> attributeNames, Handler<AsyncResult<JsonObject>> resultHandler);
 
-//    void purgeQueue(String queueUrl, Handler<AsyncResult<Unit>> resultHandler);
+//    void purgeQueue(String queueUrl, Handler<AsyncResult<Void>> resultHandler);
 
     void listDeadLetterSourceQueues(String queueUrl, Handler<AsyncResult<List<String>>> resultHandler);
 
-    void start(Handler<AsyncResult<Unit>> resultHandler);
+    void start(Handler<AsyncResult<Void>> resultHandler);
 
-    void stop(Handler<AsyncResult<Unit>> resultHandler);
+    void stop(Handler<AsyncResult<Void>> resultHandler);
 
 }

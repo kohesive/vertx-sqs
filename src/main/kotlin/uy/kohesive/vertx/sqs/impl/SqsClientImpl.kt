@@ -117,7 +117,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         }
     }
 
-    override fun deleteQueue(queueUrl: String, resultHandler: Handler<AsyncResult<Unit>>) {
+    override fun deleteQueue(queueUrl: String, resultHandler: Handler<AsyncResult<Void>>) {
         withClient { client ->
             client.deleteQueueAsync(DeleteQueueRequest(queueUrl), resultHandler.toSqsVoidHandler())
         }
@@ -129,19 +129,19 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
 //        }
 //    }
 
-    override fun deleteMessage(queueUrl: String, receiptHandle: String, resultHandler: Handler<AsyncResult<Unit>>) {
+    override fun deleteMessage(queueUrl: String, receiptHandle: String, resultHandler: Handler<AsyncResult<Void>>) {
         withClient { client ->
             client.deleteMessageAsync(DeleteMessageRequest(queueUrl, receiptHandle), resultHandler.toSqsVoidHandler())
         }
     }
 
-    override fun setQueueAttributes(queueUrl: String, attributes: MutableMap<String, String>, resultHandler: Handler<AsyncResult<Unit>>) {
+    override fun setQueueAttributes(queueUrl: String, attributes: MutableMap<String, String>, resultHandler: Handler<AsyncResult<Void>>) {
         withClient { client ->
             client.setQueueAttributesAsync(SetQueueAttributesRequest(queueUrl, attributes), resultHandler.toSqsVoidHandler())
         }
     }
 
-    override fun changeMessageVisibility(queueUrl: String, receiptHandle: String, visibilityTimeout: Int, resultHandler: Handler<AsyncResult<Unit>>) {
+    override fun changeMessageVisibility(queueUrl: String, receiptHandle: String, visibilityTimeout: Int, resultHandler: Handler<AsyncResult<Void>>) {
         withClient { client ->
             client.changeMessageVisibilityAsync(ChangeMessageVisibilityRequest(queueUrl, receiptHandle, visibilityTimeout), resultHandler.toSqsVoidHandler())
         }
@@ -155,13 +155,13 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         }
     }
 
-    override fun addPermissionAsync(queueUrl: String, label: String, aWSAccountIds: List<String>?, actions: List<String>?, resultHandler: Handler<AsyncResult<Unit>>) {
+    override fun addPermissionAsync(queueUrl: String, label: String, aWSAccountIds: List<String>?, actions: List<String>?, resultHandler: Handler<AsyncResult<Void>>) {
         withClient { client ->
             client.addPermissionAsync(AddPermissionRequest(queueUrl, label, aWSAccountIds, actions), resultHandler.toSqsVoidHandler())
         }
     }
 
-    override fun removePermission(queueUrl: String, label: String, resultHandler: Handler<AsyncResult<Unit>>) {
+    override fun removePermission(queueUrl: String, label: String, resultHandler: Handler<AsyncResult<Void>>) {
         withClient { client -> 
             client.removePermissionAsync(RemovePermissionRequest(queueUrl, label), resultHandler.toSqsVoidHandler())
         }
@@ -208,7 +208,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         ))
 
 
-    override fun start(resultHandler: Handler<AsyncResult<Unit>>) {
+    override fun start(resultHandler: Handler<AsyncResult<Void>>) {
         log.info("Starting SQS client");
 
         vertx.executeBlocking(Handler { future ->
@@ -238,7 +238,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         }
     }
 
-    override fun stop(resultHandler: Handler<AsyncResult<Unit>>) {
+    override fun stop(resultHandler: Handler<AsyncResult<Void>>) {
         resultHandler.handle(Future.succeededFuture()) // nothing
     }
 
@@ -246,8 +246,18 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         return withConverter { it }
     }
 
-    fun <SqsRequest : AmazonWebServiceRequest, SqsResult: AmazonWebServiceResult<ResponseMetadata>> Handler<AsyncResult<Unit>>.toSqsVoidHandler(): AsyncHandler<SqsRequest, SqsResult> {
-        return withConverter { it }
+    fun <SqsRequest : AmazonWebServiceRequest, SqsResult: AmazonWebServiceResult<ResponseMetadata>> Handler<AsyncResult<Void>>.toSqsVoidHandler(): AsyncHandler<SqsRequest, SqsResult> {
+        val vertxHandler = this
+        return  object : AsyncHandler<SqsRequest, SqsResult> {
+            override fun onSuccess(request: SqsRequest, result: SqsResult) {
+               vertxHandler.handle(Future.succeededFuture())
+            }
+
+            override fun onError(exception: java.lang.Exception?) {
+                vertxHandler.handle(Future.failedFuture(exception))
+            }
+
+        }
     }
 
     fun <SqsRequest : AmazonWebServiceRequest, SqsResult: AmazonWebServiceResult<ResponseMetadata>, VertxResult> Handler<AsyncResult<VertxResult>>.withConverter(

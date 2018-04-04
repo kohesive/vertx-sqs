@@ -22,7 +22,7 @@ buildscript {
 apply from: "$rootDir/gradle/sonatype-top.gradle"
 
 apply from: "$rootDir/gradle/kotlin-settings.gradle"
-apply plugin: 'groovy'
+// apply plugin: 'groovy'
 apply plugin: 'net.ltgt.apt'
 
 apply from: "$rootDir/gradle/idea.gradle"
