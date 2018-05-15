@@ -41,7 +41,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         }
     } else {
         try {
-            ProfileCredentialsProvider()
+            DefaultAWSCredentialsProviderChain()
         } catch (t: Throwable) {
             throw AmazonClientException(
                 "Cannot load the credentials from the credential profiles file. " +
