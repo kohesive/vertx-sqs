@@ -44,6 +44,7 @@ repositories {
     }
 }
 
+
 dependencies {
     compile "io.vertx:vertx-core:$version_vertx"
     compile "io.vertx:vertx-lang-groovy:$version_vertx"
