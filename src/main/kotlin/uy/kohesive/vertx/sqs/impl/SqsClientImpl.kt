@@ -6,7 +6,7 @@ import com.amazonaws.AmazonWebServiceResult
 import com.amazonaws.ResponseMetadata
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
@@ -41,7 +41,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         }
     } else {
         try {
-            ProfileCredentialsProvider()
+            DefaultAWSCredentialsProviderChain()
         } catch (t: Throwable) {
             throw AmazonClientException(
                 "Cannot load the credentials from the credential profiles file. " +
