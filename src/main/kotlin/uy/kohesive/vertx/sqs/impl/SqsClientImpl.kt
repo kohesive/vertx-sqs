@@ -7,10 +7,10 @@ import com.amazonaws.ResponseMetadata
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.handlers.AsyncHandler
-import com.amazonaws.regions.Region
-import com.amazonaws.regions.Regions
-import com.amazonaws.services.sqs.AmazonSQSAsyncClient
+import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder
 import com.amazonaws.services.sqs.model.*
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
@@ -30,7 +30,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         private val log = LoggerFactory.getLogger(SqsClientImpl::class.java)
     }
 
-    private var client: AmazonSQSAsyncClient by Delegates.notNull()
+    private var client: AmazonSQSAsync by Delegates.notNull()
 
     private var initialized = AtomicBoolean(false)
 
@@ -213,13 +213,15 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
 
         vertx.executeBlocking(Handler { future ->
             try {
-                client = AmazonSQSAsyncClient(getCredentialsProvider())
-
-                val region = config.getString("region")
-                client.setRegion(Region.getRegion(Regions.fromName(region)))
+                val configRegion = config.getString("region")
+                var endpoint = ""
                 if (config.getString("host") != null && config.getInteger("port") != null) {
-                    client.setEndpoint("http://${ config.getString("host") }:${ config.getInteger("port") }")
+                    endpoint = "http://${ config.getString("host") }:${ config.getInteger("port") }"
                 }
+                client = AmazonSQSAsyncClientBuilder.standard().apply {
+                    withCredentials(getCredentialsProvider())
+                    withEndpointConfiguration(AwsClientBuilder.EndpointConfiguration(endpoint, configRegion))
+                }.build()
 
                 initialized.set(true)
 
@@ -230,7 +232,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         }, true, resultHandler)
     }
 
-    private fun withClient(handler: (AmazonSQSAsyncClient) -> Unit) {
+    private fun withClient(handler: (AmazonSQSAsync) -> Unit) {
         if (initialized.get()) {
             handler(client)
         } else {

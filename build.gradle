@@ -4,7 +4,7 @@ buildscript {
     repositories {
         jcenter()
         maven {
-            url 'http://oss.sonatype.org/content/repositories/snapshots'
+            url 'https://oss.sonatype.org/content/repositories/snapshots'
         }
         mavenCentral()
         maven {
@@ -13,7 +13,6 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-        classpath "net.ltgt.gradle:gradle-apt-plugin:0.13"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
         classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.11.0"
     }
@@ -22,12 +21,11 @@ buildscript {
 apply from: "$rootDir/gradle/sonatype-top.gradle"
 
 apply from: "$rootDir/gradle/kotlin-settings.gradle"
-// apply plugin: 'groovy'
-apply plugin: 'net.ltgt.apt'
 
 apply from: "$rootDir/gradle/idea.gradle"
 apply from: "$rootDir/gradle/sonatype-subproj.gradle"
 apply from: "$rootDir/gradle/bintray.gradle"
+
 
 
 if (!JavaVersion.current().java8Compatible) {
@@ -53,24 +51,25 @@ dependencies {
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
 
-    compile "com.amazonaws:aws-java-sdk-sqs:$version_sqs"
+    implementation platform("com.amazonaws:aws-java-sdk-bom:$version_aws")
+    implementation("com.amazonaws:aws-java-sdk-sqs")
 
     compile "nl.komponents.kovenant:kovenant:$version_kovenant"
 
     compileOnly "io.vertx:vertx-codegen:$version_vertx"
-    apt "io.vertx:vertx-codegen:$version_vertx"
-    apt "io.vertx:vertx-codegen:$version_vertx:processor"
+    compile "io.vertx:vertx-codegen:$version_vertx"
+    compile "io.vertx:vertx-codegen:$version_vertx:processor"
 
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion"
 
     testCompile "io.vertx:vertx-unit:$version_vertx"
 
-    testCompile "org.elasticmq:elasticmq-core_2.11:$version_elasticmq"
-    testCompile "org.elasticmq:elasticmq-rest-sqs_2.11:$version_elasticmq"
+    testCompile "org.elasticmq:elasticmq-core_2.13:$version_elasticmq"
+    testCompile "org.elasticmq:elasticmq-rest-sqs_2.13:$version_elasticmq"
     testCompile "junit:junit:$version_junit"
 }
 
-task wrapper(type: Wrapper) {
+wrapper {
     gradleVersion = "$version_gradle"
 }
 

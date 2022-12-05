@@ -92,6 +92,10 @@ public interface SqsClient {
 
 //    void purgeQueue(String queueUrl, Handler<AsyncResult<Void>> resultHandler);
 
+    //.messageGroupId(sqsGroupId + "-" + groupSubdivider)
+    //				.messageDeduplicationId(UUID.randomUUID().toString())
+
+
     void listDeadLetterSourceQueues(String queueUrl, Handler<AsyncResult<List<String>>> resultHandler);
 
     void start(Handler<AsyncResult<Void>> resultHandler);

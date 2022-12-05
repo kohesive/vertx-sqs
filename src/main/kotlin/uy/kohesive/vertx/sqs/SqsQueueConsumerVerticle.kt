@@ -5,6 +5,7 @@ import io.vertx.core.AbstractVerticle
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
+import io.vertx.core.Promise
 import io.vertx.core.eventbus.DeliveryOptions
 import io.vertx.core.eventbus.Message
 import io.vertx.core.logging.LoggerFactory
@@ -23,7 +24,7 @@ class SqsQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
 
     private var timerId: Long = -1
 
-    override fun start(startFuture: Future<Void>) {
+    override fun start(startFuture: Promise<Void>) {
         client = SqsClientImpl(vertx, config(), credentialsProvider)
 
         val queueUrl    = config().getString("queueUrl")
@@ -67,7 +68,7 @@ class SqsQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
         }
     }
 
-    override fun stop(stopFuture: Future<Void>) {
+    override fun stop(stopFuture: Promise<Void>) {
         vertx.cancelTimer(timerId)
         client.stop {
             if (it.succeeded()) {
