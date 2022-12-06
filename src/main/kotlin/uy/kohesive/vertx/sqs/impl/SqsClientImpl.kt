@@ -17,7 +17,7 @@ import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
-import io.vertx.core.logging.LoggerFactory
+import mu.KotlinLogging
 import uy.kohesive.vertx.sqs.SqsClient
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
@@ -27,7 +27,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
     SqsClient {
 
     companion object {
-        private val log = LoggerFactory.getLogger(SqsClientImpl::class.java)
+        private val log = KotlinLogging.logger {}
     }
 
     private var client: AmazonSQSAsync by Delegates.notNull()
