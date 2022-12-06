@@ -52,14 +52,14 @@ class SqsQueueConsumerVerticle() : AbstractVerticle(), SqsVerticle {
                     it.result().forEach { message ->
                         val reciept = message.getString("receiptHandle")
 
-                        vertx.eventBus().send(address, message, DeliveryOptions().setSendTimeout(timeout), Handler { ar: AsyncResult<Message<Void>> ->
+                        vertx.eventBus().request(address, message, DeliveryOptions().setSendTimeout(timeout)) { ar: AsyncResult<Message<Void>> ->
                             if (ar.succeeded()) {
                                 // Had to code it like this, as otherwise I was getting 'bad enclosing class' from Java compiler
                                 deleteMessage(queueUrl, reciept)
                             } else {
                                 log.warn("Message with receipt $reciept was failed to process by the consumer")
                             }
-                        })
+                        }
                     }
                 } else {
                     log.error("Unable to poll messages from $queueUrl", it.cause())

@@ -214,13 +214,16 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         vertx.executeBlocking(Handler { future ->
             try {
                 val configRegion = config.getString("region")
-                var endpoint = ""
-                if (config.getString("host") != null && config.getInteger("port") != null) {
-                    endpoint = "http://${ config.getString("host") }:${ config.getInteger("port") }"
-                }
+                val endpoint = if (config.containsKey("host") && config.getString("host").isNotEmpty()
+                    && config.containsKey("port") && config.getInteger("port") != null) {
+                    "http://${ config.getString("host") }:${ config.getInteger("port") }"
+                } else null
+
                 client = AmazonSQSAsyncClientBuilder.standard().apply {
                     withCredentials(getCredentialsProvider())
-                    withEndpointConfiguration(AwsClientBuilder.EndpointConfiguration(endpoint, configRegion))
+                    if (endpoint != null) {
+                        withEndpointConfiguration(AwsClientBuilder.EndpointConfiguration(endpoint, configRegion))
+                    } else withRegion(configRegion)
                 }.build()
 
                 initialized.set(true)
