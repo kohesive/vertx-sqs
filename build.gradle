@@ -2,7 +2,6 @@ apply from: "$rootDir/project-settings.gradle"
 
 buildscript {
     repositories {
-        jcenter()
         maven {
             url 'https://oss.sonatype.org/content/repositories/snapshots'
         }
@@ -28,9 +27,9 @@ apply from: "$rootDir/gradle/bintray.gradle"
 
 
 
-if (!JavaVersion.current().java8Compatible) {
+if (!JavaVersion.current().java11Compatible) {
     throw new IllegalStateException('''A Haiku:
-                                      |  This needs Java 8,
+                                      |  This needs Java 11,
                                       |  You are using something else,
                                       |  Refresh. Try again.'''.stripMargin())
 }
@@ -38,14 +37,13 @@ if (!JavaVersion.current().java8Compatible) {
 repositories {
     mavenCentral()
     maven {
-        url = 'http://oss.sonatype.org/content/repositories/snapshots/'
+        url = 'https://oss.sonatype.org/content/repositories/snapshots/'
     }
 }
 
 dependencies {
     compile "io.vertx:vertx-core:$version_vertx"
     compile "io.vertx:vertx-lang-groovy:$version_vertx"
-    compile "io.vertx:vertx-lang-js:$version_vertx"
     compile "io.vertx:vertx-service-factory:$version_vertx"
     compile "io.vertx:vertx-service-proxy:$version_vertx"
 
@@ -63,6 +61,8 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion"
 
     testCompile "io.vertx:vertx-unit:$version_vertx"
+
+    implementation "io.github.microutils:kotlin-logging-jvm:$logging_version"
 
     testCompile "org.elasticmq:elasticmq-core_2.13:$version_elasticmq"
     testCompile "org.elasticmq:elasticmq-rest-sqs_2.13:$version_elasticmq"
