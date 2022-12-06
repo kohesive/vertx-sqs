@@ -5,7 +5,6 @@ import io.vertx.core.AbstractVerticle
 import io.vertx.core.Handler
 import io.vertx.core.Promise
 import io.vertx.core.eventbus.Message
-import io.vertx.core.logging.LoggerFactory
 import mu.KotlinLogging
 import uy.kohesive.vertx.sqs.impl.SqsClientImpl
 import kotlin.properties.Delegates

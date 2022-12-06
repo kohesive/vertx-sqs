@@ -15,7 +15,7 @@ compileKotlin {
 
 compileTestKotlin {
     kotlinOptions {
-        jvmTarget = 1.8
+        jvmTarget = 11
         languageVersion = 1.7
         suppressWarnings = false
         freeCompilerArgs = ["-Xskip-runtime-version-check"]

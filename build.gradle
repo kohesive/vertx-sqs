@@ -47,7 +47,7 @@ dependencies {
     compile "io.vertx:vertx-service-factory:$version_vertx"
     compile "io.vertx:vertx-service-proxy:$version_vertx"
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
 
     implementation platform("com.amazonaws:aws-java-sdk-bom:$version_aws")
     implementation("com.amazonaws:aws-java-sdk-sqs")
