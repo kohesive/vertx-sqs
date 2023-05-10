@@ -63,22 +63,28 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         withClient { client ->
             val request = SendMessageRequest(queueUrl, messageBody).withDelaySeconds(delaySeconds)
 
-            request.messageAttributes = attributes?.map?.mapValues {
-                (it.value as? JsonObject)?.let {
-                    val type       = it.getString("dataType")
-                    val stringData = it.getString("stringData")
-                    val binaryData = it.getBinary("binaryData")
+            if (attributes != null) {
+                val messageAttributesMap = attributes.map.mapValues {
+                    (it.value as? JsonObject)?.let { jsonObj ->
+                        val type = jsonObj.getString("dataType")
+                        val stringData = jsonObj.getString("stringData")
+                        val binaryData = jsonObj.getBinary("binaryData")
 
-                    MessageAttributeValue().apply {
-                        if (binaryData != null) {
-                            binaryValue = ByteBuffer.wrap(binaryData)
+                        MessageAttributeValue().apply {
+                            if (binaryData != null) {
+                                binaryValue = ByteBuffer.wrap(binaryData)
+                            }
+                            if (stringData != null) {
+                                stringValue = stringData
+                            }
+                            dataType = type
                         }
-                        if (stringData != null) {
-                            stringValue = stringData
-                        }
-                        dataType = type
                     }
-                }
+                }.filterValues { it != null }
+                    .mapValues { it.value!! }
+                    .toMap() // Convert to java.util.Map
+
+                request.messageAttributes = messageAttributesMap
             }
 
             client.sendMessageAsync(request, resultHandler.withConverter { sqsResult ->
