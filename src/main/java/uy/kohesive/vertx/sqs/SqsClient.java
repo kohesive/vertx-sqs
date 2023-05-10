@@ -48,7 +48,6 @@ public interface SqsClient {
      * </code>
      *
      */
-    // TODO: add support for attributes
     void sendMessage(String queueUrl, String messageBody, JsonObject attributes, Integer delaySeconds, Handler<AsyncResult<String>> resultHandler);
 
     /**
@@ -91,6 +90,10 @@ public interface SqsClient {
     void getQueueAttributes(String queueUrl, List<String> attributeNames, Handler<AsyncResult<JsonObject>> resultHandler);
 
 //    void purgeQueue(String queueUrl, Handler<AsyncResult<Void>> resultHandler);
+
+    //.messageGroupId(sqsGroupId + "-" + groupSubdivider)
+    //				.messageDeduplicationId(UUID.randomUUID().toString())
+
 
     void listDeadLetterSourceQueues(String queueUrl, Handler<AsyncResult<List<String>>> resultHandler);
 

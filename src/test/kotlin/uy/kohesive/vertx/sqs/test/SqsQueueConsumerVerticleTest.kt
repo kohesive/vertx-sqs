@@ -1,9 +1,6 @@
 package uy.kohesive.vertx.sqs.test
 
-import io.vertx.core.DeploymentOptions
-import io.vertx.core.Future
-import io.vertx.core.Handler
-import io.vertx.core.Vertx
+import io.vertx.core.*
 import io.vertx.core.eventbus.Message
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.unit.TestContext
@@ -28,8 +25,9 @@ class SqsQueueConsumerVerticleTest {
 
         val ElasticMqPort = 9324
         val ElasticMqHost = "localhost"
+        val sqsAccountId = "000000000000"
 
-        fun getQueueUrl(queueName: String) = "http://${ElasticMqHost}:${ElasticMqPort}/queue/$queueName"
+        fun getQueueUrl(queueName: String) = "http://${ElasticMqHost}:${ElasticMqPort}/$sqsAccountId/$queueName"
 
         private var client: SqsClient by Delegates.notNull()
         private var sqsServer: SQSRestServer by Delegates.notNull()
@@ -43,7 +41,7 @@ class SqsQueueConsumerVerticleTest {
             "region"    to "us-west-2",
 
             // Consumer verticle config
-            "pollingInterval" to 1000,
+            "pollingInterval" to 10,
             "queueUrl"        to getQueueUrl("testQueue"),
             "address"         to "sqs.queue.test"
         ))
@@ -51,7 +49,8 @@ class SqsQueueConsumerVerticleTest {
         @BeforeClass
         @JvmStatic
         fun before(context: TestContext) {
-            sqsServer = SQSRestServerBuilder.withPort(
+            sqsServer = SQSRestServerBuilder
+                .withPort(
                 ElasticMqPort
             ).start()
 
@@ -136,9 +135,9 @@ class SqsQueueConsumerVerticleTest {
         vertx.undeploy(deploymentId, context.asyncAssertSuccess() {
             consumer.unregister()
 
-            vertx.executeBlocking(Handler { future: Future<Void> ->
+            vertx.executeBlocking(Handler { promise: Promise<Void> ->
                 Thread.sleep(1500)
-                future.complete()
+                promise.complete()
             }, context.asyncAssertSuccess() {
                 context.withClient { client ->
                     client.receiveMessage(testQueue, context.asyncAssertSuccess() { messages ->

@@ -2,10 +2,10 @@ package uy.kohesive.vertx.sqs
 
 import com.amazonaws.auth.AWSCredentialsProvider
 import io.vertx.core.AbstractVerticle
-import io.vertx.core.Future
 import io.vertx.core.Handler
+import io.vertx.core.Promise
 import io.vertx.core.eventbus.Message
-import io.vertx.core.logging.LoggerFactory
+import mu.KotlinLogging
 import uy.kohesive.vertx.sqs.impl.SqsClientImpl
 import kotlin.properties.Delegates
 
@@ -17,9 +17,9 @@ class SqsQueueProducerVerticle() : AbstractVerticle(), SqsVerticle {
     override var credentialsProvider: AWSCredentialsProvider? = null
 
     override var client: SqsClient by Delegates.notNull()
-    override val log = LoggerFactory.getLogger("SqsQueueProducerVerticle")
+    override val log = KotlinLogging.logger {}
 
-    override fun start(startFuture: Future<Void>) {
+    override fun start(startPromise: Promise<Void>) {
         client = SqsClientImpl(vertx, config(), credentialsProvider)
 
         val queueUrl = config().getString("queueUrl")
@@ -46,23 +46,23 @@ class SqsQueueProducerVerticle() : AbstractVerticle(), SqsVerticle {
                 }
                 consumer.completionHandler {
                     if (it.succeeded()) {
-                        startFuture.complete()
+                        startPromise.complete()
                     } else {
-                        startFuture.fail(it.cause())
+                        startPromise.fail(it.cause())
                     }
                 }
             } else {
-                startFuture.fail(it.cause())
+                startPromise.fail(it.cause())
             }
         }
     }
 
-    override fun stop(stopFuture: Future<Void>) {
+    override fun stop(stopPromise: Promise<Void>) {
         client.stop {
             if (it.succeeded()) {
-                stopFuture.complete()
+                stopPromise.complete()
             } else {
-                stopFuture.fail(it.cause())
+                stopPromise.fail(it.cause())
             }
         }
     }

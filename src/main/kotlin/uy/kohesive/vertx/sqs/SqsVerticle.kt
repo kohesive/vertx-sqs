@@ -1,7 +1,8 @@
 package uy.kohesive.vertx.sqs
 
 import com.amazonaws.auth.AWSCredentialsProvider
-import io.vertx.core.logging.Logger
+import mu.KLogger
+
 
 interface SqsVerticle {
 
@@ -9,7 +10,7 @@ interface SqsVerticle {
         val DefaultTimeout = 5 * 60 * 1000L // 5 minutes
     }
 
-    val log: Logger
+    val log: KLogger
     val client: SqsClient
     var credentialsProvider: AWSCredentialsProvider?
 

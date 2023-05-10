@@ -7,17 +7,17 @@ import com.amazonaws.ResponseMetadata
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.handlers.AsyncHandler
-import com.amazonaws.regions.Region
-import com.amazonaws.regions.Regions
-import com.amazonaws.services.sqs.AmazonSQSAsyncClient
+import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder
 import com.amazonaws.services.sqs.model.*
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
-import io.vertx.core.logging.LoggerFactory
+import mu.KotlinLogging
 import uy.kohesive.vertx.sqs.SqsClient
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
@@ -27,10 +27,10 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
     SqsClient {
 
     companion object {
-        private val log = LoggerFactory.getLogger(SqsClientImpl::class.java)
+        private val log = KotlinLogging.logger {}
     }
 
-    private var client: AmazonSQSAsyncClient by Delegates.notNull()
+    private var client: AmazonSQSAsync by Delegates.notNull()
 
     private var initialized = AtomicBoolean(false)
 
@@ -63,22 +63,28 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         withClient { client ->
             val request = SendMessageRequest(queueUrl, messageBody).withDelaySeconds(delaySeconds)
 
-            request.messageAttributes = attributes?.map?.mapValues {
-                (it.value as? JsonObject)?.let {
-                    val type       = it.getString("dataType")
-                    val stringData = it.getString("stringData")
-                    val binaryData = it.getBinary("binaryData")
+            if (attributes != null) {
+                val messageAttributesMap = attributes.map.mapValues {
+                    (it.value as? JsonObject)?.let { jsonObj ->
+                        val type = jsonObj.getString("dataType")
+                        val stringData = jsonObj.getString("stringData")
+                        val binaryData = jsonObj.getBinary("binaryData")
 
-                    MessageAttributeValue().apply {
-                        if (binaryData != null) {
-                            binaryValue = ByteBuffer.wrap(binaryData)
+                        MessageAttributeValue().apply {
+                            if (binaryData != null) {
+                                binaryValue = ByteBuffer.wrap(binaryData)
+                            }
+                            if (stringData != null) {
+                                stringValue = stringData
+                            }
+                            dataType = type
                         }
-                        if (stringData != null) {
-                            stringValue = stringData
-                        }
-                        dataType = type
                     }
-                }
+                }.filterValues { it != null }
+                    .mapValues { it.value!! }
+                    .toMap() // Convert to java.util.Map
+
+                request.messageAttributes = messageAttributesMap
             }
 
             client.sendMessageAsync(request, resultHandler.withConverter { sqsResult ->
@@ -213,13 +219,18 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
 
         vertx.executeBlocking(Handler { future ->
             try {
-                client = AmazonSQSAsyncClient(getCredentialsProvider())
+                val configRegion = config.getString("region")
+                val endpoint = if (config.containsKey("host") && config.getString("host").isNotEmpty()
+                    && config.containsKey("port") && config.getInteger("port") != null) {
+                    "http://${ config.getString("host") }:${ config.getInteger("port") }"
+                } else null
 
-                val region = config.getString("region")
-                client.setRegion(Region.getRegion(Regions.fromName(region)))
-                if (config.getString("host") != null && config.getInteger("port") != null) {
-                    client.setEndpoint("http://${ config.getString("host") }:${ config.getInteger("port") }")
-                }
+                client = AmazonSQSAsyncClientBuilder.standard().apply {
+                    withCredentials(getCredentialsProvider())
+                    if (endpoint != null) {
+                        withEndpointConfiguration(AwsClientBuilder.EndpointConfiguration(endpoint, configRegion))
+                    } else withRegion(configRegion)
+                }.build()
 
                 initialized.set(true)
 
@@ -230,7 +241,7 @@ class SqsClientImpl(val vertx: Vertx, val config: JsonObject, val credentialProv
         }, true, resultHandler)
     }
 
-    private fun withClient(handler: (AmazonSQSAsyncClient) -> Unit) {
+    private fun withClient(handler: (AmazonSQSAsync) -> Unit) {
         if (initialized.get()) {
             handler(client)
         } else {
